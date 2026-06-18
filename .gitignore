@@ -1,0 +1,6 @@
+node_modules/
+sessions/
+sifer.db
+.env
+*.csv
+insert-test.js

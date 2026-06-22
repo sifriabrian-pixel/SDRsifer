@@ -3,8 +3,8 @@
 let lastSentAt = 0;
 
 function randomDelay() {
-  // Entre 45 y 120 segundos
-  return (45 + Math.floor(Math.random() * 75)) * 1000;
+  // Entre 2 y 3 minutos (delay alto mientras el número se recupera de un ban)
+  return (120 + Math.floor(Math.random() * 60)) * 1000;
 }
 
 function sleep(ms) {

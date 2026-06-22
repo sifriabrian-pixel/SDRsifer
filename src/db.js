@@ -14,9 +14,11 @@ export function initDb() {
       agency_name TEXT NOT NULL,
       gatekeeper_phone TEXT NOT NULL,
       gatekeeper_jid TEXT,
+      gatekeeper_lid TEXT,
       dm_name TEXT,
       dm_phone TEXT,
       dm_jid TEXT,
+      dm_lid TEXT,
       city TEXT,
       country TEXT,
       stage TEXT NOT NULL DEFAULT 'PENDING',
@@ -32,6 +34,15 @@ export function initDb() {
     CREATE INDEX IF NOT EXISTS idx_gatekeeper_jid ON prospects(gatekeeper_jid);
     CREATE INDEX IF NOT EXISTS idx_dm_jid ON prospects(dm_jid);
   `);
+
+  // Migración: agregar columnas si la tabla ya existía sin ellas
+  const existingCols = db.prepare(`PRAGMA table_info(prospects)`).all().map((c) => c.name);
+  if (!existingCols.includes('gatekeeper_lid')) {
+    db.exec(`ALTER TABLE prospects ADD COLUMN gatekeeper_lid TEXT`);
+  }
+  if (!existingCols.includes('dm_lid')) {
+    db.exec(`ALTER TABLE prospects ADD COLUMN dm_lid TEXT`);
+  }
 
   return db;
 }

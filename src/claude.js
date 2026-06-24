@@ -13,8 +13,9 @@ async function classify(systemPrompt, userMessage, retries = 2) {
         messages: [{ role: 'user', content: userMessage }],
       });
       const text = response.content[0].text.trim();
+      const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
       try {
-        return JSON.parse(text);
+        return JSON.parse(cleaned);
       } catch {
         console.log(`[CLAUDE] Respuesta no-JSON: ${text}`);
         return { raw: text };
@@ -116,3 +117,22 @@ MANDAME_INFO: pide explícitamente información por WhatsApp/mail antes de habla
 
 // Alias para compatibilidad
 export const classifyDmBifurcation = classifyDmFirstResponse;
+
+// Clasifica una respuesta a la secuencia de cold email (Sifer Cold Email v1.0)
+export async function classifyColdEmailReply(message) {
+  const system = `Eres un clasificador para una secuencia de cold email inmobiliario. Alguien respondió a uno de los correos de la secuencia.
+
+REGLA: la única categoría especial es cuando la persona aclara que ELLA NO es quien toma decisiones comerciales. Cualquier otra respuesta (interés, pregunta, rechazo, lo que sea) es HANDOFF.
+
+Devolvé SOLO un JSON con este formato exacto:
+{
+  "action": "NOT_DECISION_MAKER" | "HANDOFF",
+  "redirect_email": "<email si lo dieron en el mismo mensaje, o null>",
+  "redirect_name": "<nombre de la persona indicada, o null>"
+}
+
+NOT_DECISION_MAKER: dice explícitamente que no es el director/encargado, que no maneja esas decisiones, o redirige a otra persona ("eso lo maneja fulano", "no soy yo, hablale a...")
+HANDOFF: cualquier otra respuesta — interés, pregunta, rechazo, pedido de info, lo que sea`;
+
+  return classify(system, message);
+}

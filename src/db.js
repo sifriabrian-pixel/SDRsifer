@@ -35,6 +35,7 @@ export function initDb() {
       email_last_reply_at TEXT,
       email_message_id TEXT,
       email_subject TEXT,
+      email_first_sent_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
@@ -52,6 +53,7 @@ export function initDb() {
     email_last_reply_at: `ALTER TABLE prospects ADD COLUMN email_last_reply_at TEXT`,
     email_message_id: `ALTER TABLE prospects ADD COLUMN email_message_id TEXT`,
     email_subject: `ALTER TABLE prospects ADD COLUMN email_subject TEXT`,
+    email_first_sent_at: `ALTER TABLE prospects ADD COLUMN email_first_sent_at TEXT`,
   };
   for (const [col, sql] of Object.entries(migrations)) {
     if (!existingCols.includes(col)) db.exec(sql);
@@ -169,21 +171,41 @@ export function getProspectsNoReply() {
   `).all();
 }
 
-// Mismo patrón de follow-up pero para el canal de email (48hs, más lento que WhatsApp)
-export function getEmailProspectsNeedingFollowup() {
+// Secuencia cold email — 4 toques en días fijos desde el primer envío (1, 3, 10, 17)
+// Solo avanza si no hubo respuesta (email_last_reply_at) después del envío anterior
+
+export function getEmailDueForToque2() {
   return getDb().prepare(`
     SELECT * FROM prospects
-    WHERE email_stage = 'FASE2_PORTERO'
-    AND email_last_message_at < datetime('now', '-48 hours')
-    AND (email_last_reply_at IS NULL OR email_last_reply_at < email_last_message_at)
+    WHERE email_stage = 'TOQUE_1_SENT'
+    AND email_first_sent_at <= datetime('now', '-3 days')
+    AND (email_last_reply_at IS NULL OR email_last_reply_at < email_first_sent_at)
   `).all();
 }
 
-export function getEmailProspectsNoReply() {
+export function getEmailDueForToque3() {
   return getDb().prepare(`
     SELECT * FROM prospects
-    WHERE email_stage = 'FASE2_FOLLOWUP_SENT'
-    AND email_last_message_at < datetime('now', '-48 hours')
-    AND (email_last_reply_at IS NULL OR email_last_reply_at < email_last_message_at)
+    WHERE email_stage = 'TOQUE_2_SENT'
+    AND email_first_sent_at <= datetime('now', '-10 days')
+    AND (email_last_reply_at IS NULL OR email_last_reply_at < email_first_sent_at)
+  `).all();
+}
+
+export function getEmailDueForToque4() {
+  return getDb().prepare(`
+    SELECT * FROM prospects
+    WHERE email_stage = 'TOQUE_3_SENT'
+    AND email_first_sent_at <= datetime('now', '-17 days')
+    AND (email_last_reply_at IS NULL OR email_last_reply_at < email_first_sent_at)
+  `).all();
+}
+
+export function getEmailDueForNoReply() {
+  return getDb().prepare(`
+    SELECT * FROM prospects
+    WHERE email_stage = 'TOQUE_4_SENT'
+    AND email_first_sent_at <= datetime('now', '-24 days')
+    AND (email_last_reply_at IS NULL OR email_last_reply_at < email_first_sent_at)
   `).all();
 }

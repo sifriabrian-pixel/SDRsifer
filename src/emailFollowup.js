@@ -7,11 +7,14 @@ import {
 } from './db.js';
 import { sendEmail } from './email.js';
 import { enqueueEmail } from './emailScheduler.js';
+import { isWithinSendWindow } from './sendWindow.js';
 import { EMAIL_TOQUE_2, EMAIL_TOQUE_3, EMAIL_TOQUE_4 } from '../data/emailSequences.js';
 
-const CHECK_INTERVAL_MS = 30 * 60 * 1000; // cada 30 minutos
+const CHECK_INTERVAL_MS = 10 * 60 * 1000; // cada 10 minutos (la ventana es de 1hs, hay que revisar seguido)
 
 async function sendToque(prospect, stageAfter, buildFn, isReply) {
+  if (!isWithinSendWindow(prospect.country)) return; // se reintenta en el próximo poll, dentro de la ventana
+
   const pais = prospect.country || '[país]';
   const built = buildFn(pais, prospect.dm_name);
   const subject = isReply ? `${built.subjectPrefix}${prospect.email_subject}` : built.subject;

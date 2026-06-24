@@ -8,7 +8,7 @@ import { startLaunchRequestWatcher } from './src/launchRequest.js';
 import { startEmailListener } from './src/email.js';
 import { handleIncomingEmail } from './src/emailRouter.js';
 import { startEmailFollowupScheduler } from './src/emailFollowup.js';
-import { startEmailLaunchRequestWatcher } from './src/emailLaunchRequest.js';
+import { startEmailAutoSender } from './src/emailAutoSender.js';
 import path from 'path';
 
 function startEmailChannel() {
@@ -20,7 +20,7 @@ function startEmailChannel() {
     console.error('[EMAIL] Error al conectar IMAP:', err.message);
   });
   startEmailFollowupScheduler();
-  startEmailLaunchRequestWatcher();
+  startEmailAutoSender();
 }
 
 const args = process.argv.slice(2);

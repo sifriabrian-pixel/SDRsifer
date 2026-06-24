@@ -22,6 +22,7 @@ export async function importCsv(filePath) {
         rows.push({
           agency_name: normalized.agency_name || normalized.empresa || normalized.agencia || normalized.nombre || '',
           gatekeeper_phone: rawPhone.replace(/\D/g, ''), // quita +, espacios, guiones
+          gatekeeper_email: (normalized.email || normalized.mail || '').trim() || null,
           city: normalized.city || normalized.ciudad || '',
           country: normalized.country || normalized.pais || normalized.país || '',
         });

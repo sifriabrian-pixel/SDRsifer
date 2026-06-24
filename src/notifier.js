@@ -8,15 +8,19 @@ export function setSocket(s) {
 
 export async function sendHandoff(prospect) {
   const brianJid = `${process.env.BRIAN_PHONE}@s.whatsapp.net`;
+  const canal = prospect.channel === 'email' ? '📧 Email' : '💬 WhatsApp';
+  const dmContacto = prospect.channel === 'email'
+    ? prospect.dm_email
+    : (prospect.dm_phone || prospect.dm_jid);
 
   const msg = [
-    `🔔 *LEAD INTERESADO — HANDOFF*`,
+    `🔔 *LEAD INTERESADO — HANDOFF (${canal})*`,
     ``,
     `*Agencia:* ${prospect.agency_name}`,
     `*Ciudad/País:* ${prospect.city}, ${prospect.country}`,
     ``,
-    `*Portero:* ${prospect.gatekeeper_phone}`,
-    `*DM:* ${prospect.dm_name || 'No registrado'} — ${prospect.dm_phone || prospect.dm_jid}`,
+    `*Portero:* ${prospect.gatekeeper_phone || prospect.gatekeeper_email}`,
+    `*DM:* ${prospect.dm_name || 'No registrado'} — ${dmContacto}`,
     ``,
     `*Resumen:*`,
     prospect.notes || 'Sin notas',

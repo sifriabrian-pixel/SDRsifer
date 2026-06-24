@@ -5,7 +5,23 @@ import { importCsv } from './data/prospects.js';
 import { startFollowupScheduler } from './src/followup.js';
 import { runLaunchBatch } from './src/launch.js';
 import { startLaunchRequestWatcher } from './src/launchRequest.js';
+import { startEmailListener } from './src/email.js';
+import { handleIncomingEmail } from './src/emailRouter.js';
+import { startEmailFollowupScheduler } from './src/emailFollowup.js';
+import { startEmailLaunchRequestWatcher } from './src/emailLaunchRequest.js';
 import path from 'path';
+
+function startEmailChannel() {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+    console.log('📧 Canal de email desactivado (faltan EMAIL_USER / EMAIL_PASSWORD)');
+    return;
+  }
+  startEmailListener(handleIncomingEmail).catch((err) => {
+    console.error('[EMAIL] Error al conectar IMAP:', err.message);
+  });
+  startEmailFollowupScheduler();
+  startEmailLaunchRequestWatcher();
+}
 
 const args = process.argv.slice(2);
 
@@ -31,6 +47,7 @@ async function main() {
     console.log('Agente activo — escuchando respuestas entrantes.\n');
     startFollowupScheduler();
     startLaunchRequestWatcher();
+    startEmailChannel();
     // No hay return — el proceso queda vivo escuchando respuestas
   }
 
@@ -56,6 +73,7 @@ async function main() {
   console.log('Agente activo — escuchando respuestas entrantes.');
   startFollowupScheduler();
   startLaunchRequestWatcher();
+  startEmailChannel();
 }
 
 main().catch((err) => {

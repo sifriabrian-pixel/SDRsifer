@@ -27,22 +27,44 @@ export function initDb() {
       last_message_at TEXT,
       last_reply_at TEXT,
       notes TEXT,
+      gatekeeper_email TEXT,
+      dm_email TEXT,
+      email_stage TEXT NOT NULL DEFAULT 'PENDING',
+      email_rejection_count INTEGER NOT NULL DEFAULT 0,
+      email_last_message_at TEXT,
+      email_last_reply_at TEXT,
+      email_message_id TEXT,
+      email_subject TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+  `);
 
+  // Migración: agregar columnas si la tabla ya existía sin ellas (debe correr ANTES de crear índices que las referencian)
+  const existingCols = db.prepare(`PRAGMA table_info(prospects)`).all().map((c) => c.name);
+  const migrations = {
+    gatekeeper_lid: `ALTER TABLE prospects ADD COLUMN gatekeeper_lid TEXT`,
+    dm_lid: `ALTER TABLE prospects ADD COLUMN dm_lid TEXT`,
+    gatekeeper_email: `ALTER TABLE prospects ADD COLUMN gatekeeper_email TEXT`,
+    dm_email: `ALTER TABLE prospects ADD COLUMN dm_email TEXT`,
+    email_stage: `ALTER TABLE prospects ADD COLUMN email_stage TEXT NOT NULL DEFAULT 'PENDING'`,
+    email_rejection_count: `ALTER TABLE prospects ADD COLUMN email_rejection_count INTEGER NOT NULL DEFAULT 0`,
+    email_last_message_at: `ALTER TABLE prospects ADD COLUMN email_last_message_at TEXT`,
+    email_last_reply_at: `ALTER TABLE prospects ADD COLUMN email_last_reply_at TEXT`,
+    email_message_id: `ALTER TABLE prospects ADD COLUMN email_message_id TEXT`,
+    email_subject: `ALTER TABLE prospects ADD COLUMN email_subject TEXT`,
+  };
+  for (const [col, sql] of Object.entries(migrations)) {
+    if (!existingCols.includes(col)) db.exec(sql);
+  }
+
+  db.exec(`
     CREATE INDEX IF NOT EXISTS idx_stage ON prospects(stage);
     CREATE INDEX IF NOT EXISTS idx_gatekeeper_jid ON prospects(gatekeeper_jid);
     CREATE INDEX IF NOT EXISTS idx_dm_jid ON prospects(dm_jid);
+    CREATE INDEX IF NOT EXISTS idx_email_stage ON prospects(email_stage);
+    CREATE INDEX IF NOT EXISTS idx_gatekeeper_email ON prospects(gatekeeper_email);
+    CREATE INDEX IF NOT EXISTS idx_dm_email ON prospects(dm_email);
   `);
-
-  // Migración: agregar columnas si la tabla ya existía sin ellas
-  const existingCols = db.prepare(`PRAGMA table_info(prospects)`).all().map((c) => c.name);
-  if (!existingCols.includes('gatekeeper_lid')) {
-    db.exec(`ALTER TABLE prospects ADD COLUMN gatekeeper_lid TEXT`);
-  }
-  if (!existingCols.includes('dm_lid')) {
-    db.exec(`ALTER TABLE prospects ADD COLUMN dm_lid TEXT`);
-  }
 
   return db;
 }
@@ -62,6 +84,15 @@ export function getProspectByJid(jid) {
   `).get(jid, jid, jid, jid);
 }
 
+export function getProspectByEmail(email) {
+  const d = getDb();
+  return d.prepare(`
+    SELECT * FROM prospects
+    WHERE gatekeeper_email = ? OR dm_email = ?
+    LIMIT 1
+  `).get(email, email);
+}
+
 export function updateProspect(id, fields) {
   const d = getDb();
   const entries = Object.entries(fields);
@@ -73,17 +104,45 @@ export function updateProspect(id, fields) {
 export function insertProspects(rows) {
   const d = getDb();
   const stmt = d.prepare(`
-    INSERT OR IGNORE INTO prospects (agency_name, gatekeeper_phone, city, country)
-    VALUES (@agency_name, @gatekeeper_phone, @city, @country)
+    INSERT OR IGNORE INTO prospects (agency_name, gatekeeper_phone, gatekeeper_email, city, country)
+    VALUES (@agency_name, @gatekeeper_phone, @gatekeeper_email, @city, @country)
   `);
   const insertMany = d.transaction((list) => {
-    for (const row of list) stmt.run(row);
+    for (const row of list) stmt.run({ gatekeeper_email: null, ...row });
   });
   insertMany(rows);
 }
 
+// Actualiza el email de prospectos ya existentes (por nombre de agencia + teléfono) sin duplicar filas
+export function updateEmailsByPhone(rows) {
+  const d = getDb();
+  const stmt = d.prepare(`
+    UPDATE prospects SET gatekeeper_email = @email
+    WHERE gatekeeper_phone = @phone AND (gatekeeper_email IS NULL OR gatekeeper_email = '')
+  `);
+  const updateMany = d.transaction((list) => {
+    let count = 0;
+    for (const row of list) {
+      if (!row.email) continue;
+      const result = stmt.run(row);
+      if (result.changes > 0) count++;
+    }
+    return count;
+  });
+  return updateMany(rows);
+}
+
 export function getPendingProspects(limit = 50, offset = 0) {
   return getDb().prepare(`SELECT * FROM prospects WHERE stage = 'PENDING' LIMIT ? OFFSET ?`).all(limit, offset);
+}
+
+// Prospectos con email conocido y pipeline de email aún no iniciado
+export function getPendingEmailProspects(limit = 50) {
+  return getDb().prepare(`
+    SELECT * FROM prospects
+    WHERE email_stage = 'PENDING' AND gatekeeper_email IS NOT NULL AND gatekeeper_email != ''
+    LIMIT ?
+  `).all(limit);
 }
 
 export function getAllProspects() {
@@ -107,5 +166,24 @@ export function getProspectsNoReply() {
     WHERE stage = 'FASE2_FOLLOWUP_SENT'
     AND last_message_at < datetime('now', '-24 hours')
     AND (last_reply_at IS NULL OR last_reply_at < last_message_at)
+  `).all();
+}
+
+// Mismo patrón de follow-up pero para el canal de email (48hs, más lento que WhatsApp)
+export function getEmailProspectsNeedingFollowup() {
+  return getDb().prepare(`
+    SELECT * FROM prospects
+    WHERE email_stage = 'FASE2_PORTERO'
+    AND email_last_message_at < datetime('now', '-48 hours')
+    AND (email_last_reply_at IS NULL OR email_last_reply_at < email_last_message_at)
+  `).all();
+}
+
+export function getEmailProspectsNoReply() {
+  return getDb().prepare(`
+    SELECT * FROM prospects
+    WHERE email_stage = 'FASE2_FOLLOWUP_SENT'
+    AND email_last_message_at < datetime('now', '-48 hours')
+    AND (email_last_reply_at IS NULL OR email_last_reply_at < email_last_message_at)
   `).all();
 }

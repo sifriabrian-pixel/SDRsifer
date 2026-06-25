@@ -1,6 +1,11 @@
 import nodemailer from 'nodemailer';
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
+import dns from 'dns';
+
+// Railway no tiene salida IPv6 funcional — Google resuelve a IPv6 primero y la conexión
+// falla con ENETUNREACH. Forzamos resolución IPv4 para SMTP e IMAP.
+dns.setDefaultResultOrder('ipv4first');
 
 let transporter;
 let processedUids = new Set(); // evita reprocesar el mismo correo dos veces en una sesión

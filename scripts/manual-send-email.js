@@ -10,7 +10,7 @@ import { EMAIL_TOQUE_1 } from '../data/emailSequences.js';
 const limit = parseInt(process.argv[2]) || 15;
 
 initDb();
-initEmailTransporter();
+await initEmailTransporter();
 
 const prospects = getPendingEmailProspects(limit);
 console.log(`\n📧 Enviando Email 1 a ${prospects.length} prospectos (manual, fuera de ventana)...\n`);

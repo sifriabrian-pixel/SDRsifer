@@ -4,18 +4,31 @@ import { simpleParser } from 'mailparser';
 import dns from 'dns';
 
 // Railway no tiene salida IPv6 funcional — Google resuelve a IPv6 primero y la conexión
-// falla con ENETUNREACH. Forzamos resolución IPv4 para SMTP e IMAP.
+// falla con ENETUNREACH. El hint global no alcanza para nodemailer, así que resolvemos
+// manualmente a IPv4 y conectamos por IP (con servername para que el TLS valide bien).
 dns.setDefaultResultOrder('ipv4first');
+
+async function resolveIPv4(hostname) {
+  try {
+    const { address } = await dns.promises.lookup(hostname, { family: 4 });
+    return address;
+  } catch {
+    return hostname; // si falla la resolución manual, cae al hostname original
+  }
+}
 
 let transporter;
 let processedUids = new Set(); // evita reprocesar el mismo correo dos veces en una sesión
 
-export function initEmailTransporter() {
+export async function initEmailTransporter() {
   const port = parseInt(process.env.EMAIL_SMTP_PORT || '465');
+  const host = process.env.EMAIL_SMTP_HOST;
+  const ip = await resolveIPv4(host);
   transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_SMTP_HOST,
+    host: ip,
     port,
     secure: port === 465, // 465 = TLS implícito, 587 = STARTTLS
+    tls: { servername: host },
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASSWORD,
@@ -29,7 +42,7 @@ export function initEmailTransporter() {
 
 // Envía un email. Si messageId/subject vienen, responde en el mismo hilo (In-Reply-To/References)
 export async function sendEmail({ to, subject, text, inReplyTo = null }) {
-  if (!transporter) initEmailTransporter();
+  if (!transporter) await initEmailTransporter();
 
   const fromName = process.env.SDR_NAME || 'Marcos';
   const mailOptions = {

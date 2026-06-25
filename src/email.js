@@ -6,14 +6,18 @@ let transporter;
 let processedUids = new Set(); // evita reprocesar el mismo correo dos veces en una sesión
 
 export function initEmailTransporter() {
+  const port = parseInt(process.env.EMAIL_SMTP_PORT || '465');
   transporter = nodemailer.createTransport({
     host: process.env.EMAIL_SMTP_HOST,
-    port: parseInt(process.env.EMAIL_SMTP_PORT || '465'),
-    secure: true,
+    port,
+    secure: port === 465, // 465 = TLS implícito, 587 = STARTTLS
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASSWORD,
     },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 20000,
   });
   return transporter;
 }

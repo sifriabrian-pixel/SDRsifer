@@ -23,8 +23,8 @@ const FIRMA = () => {
 export const EMAIL_TOQUE_1 = (pais, dmName) => {
   const caso = casoPorPais(pais);
   return {
-    subject: `Cómo ${caso} agendó 25 visitas en 60 días sin agregar asesores`,
-    text: `${saludo(dmName)}\n\n${caso} tenía el mismo problema que la mayoría de las inmobiliarias en ${pais}: leads que llegaban y se perdían porque el equipo no llegaba a hacer el seguimiento a tiempo.\n\nImplementamos un sistema de captación + respuesta automática con IA y en 60 días agendaron 25 visitas nuevas — sin contratar a nadie más.\n\n¿Tiene 20 minutos esta semana para ver si aplica a su operación?\n\n${FIRMA()}\n\n¿No es usted quien toma este tipo de decisiones? Me indica a quién escribirle y le contacto directamente.`,
+    subject: `Cómo ${caso} agendó +25 visitas en 60 días sin agregar asesores`,
+    text: `${saludo(dmName)}\n\n${caso} tenía el mismo problema que la mayoría de las inmobiliarias en ${pais}: leads que llegaban y se perdían porque el equipo no llegaba a hacer el seguimiento a tiempo.\n\nImplementamos un sistema de captación + respuesta automática con IA y en 60 días agendaron +25 visitas nuevas — sin contratar a nadie más.\n\n¿Tiene 20 minutos esta semana para ver si aplica a su operación?\n\n${FIRMA()}\n\n¿No es usted quien toma este tipo de decisiones? Me indica a quién escribirle y le contacto directamente.`,
   };
 };
 

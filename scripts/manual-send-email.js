@@ -3,14 +3,13 @@
 
 import 'dotenv/config';
 import { initDb, getPendingEmailProspects, updateProspect } from '../src/db.js';
-import { sendEmail, initEmailTransporter } from '../src/email.js';
+import { sendEmail } from '../src/email.js';
 import { enqueueEmail } from '../src/emailScheduler.js';
 import { EMAIL_TOQUE_1 } from '../data/emailSequences.js';
 
 const limit = parseInt(process.argv[2]) || 15;
 
 initDb();
-await initEmailTransporter();
 
 const prospects = getPendingEmailProspects(limit);
 console.log(`\n📧 Enviando Email 1 a ${prospects.length} prospectos (manual, fuera de ventana)...\n`);

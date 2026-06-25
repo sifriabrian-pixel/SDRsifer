@@ -1,9 +1,34 @@
-import { getProspectByEmail } from './db.js';
+import { getProspectByEmail, updateProspect } from './db.js';
 import { handleEmailMessage } from './emailStateMachine.js';
+import { isBounceEmail, extractBouncedAddress } from './bounceDetector.js';
 
 const processing = new Set(); // lock por prospecto, igual que en WhatsApp
 
+function appendNote(existing, note) {
+  const ts = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  return `${existing || ''}\n[${ts}] ${note}`.trim();
+}
+
 export async function handleIncomingEmail(parsedMail) {
+  if (isBounceEmail(parsedMail)) {
+    const bouncedEmail = extractBouncedAddress(parsedMail);
+    if (!bouncedEmail) {
+      console.log('[EMAIL-BOUNCE] No se pudo extraer la dirección rebotada');
+      return;
+    }
+    const prospect = getProspectByEmail(bouncedEmail);
+    if (!prospect) {
+      console.log(`[EMAIL-BOUNCE] Sin prospecto asociado: ${bouncedEmail}`);
+      return;
+    }
+    await updateProspect(prospect.id, {
+      email_stage: 'BOUNCED',
+      notes: appendNote(prospect.notes, `Email rebotó (${bouncedEmail}) — dirección inválida`),
+    });
+    console.log(`[EMAIL-BOUNCE] ${prospect.agency_name} — ${bouncedEmail} rebotó, contacto cerrado`);
+    return;
+  }
+
   const fromAddress = parsedMail.from?.value?.[0]?.address?.toLowerCase();
   if (!fromAddress) return;
 

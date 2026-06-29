@@ -34,26 +34,16 @@ export async function sendEmail({ to, subject, text, inReplyTo = null }) {
   return { messageId: data?.id };
 }
 
-// Escucha la bandeja de entrada con IMAP IDLE y llama onMessage(parsedMail) por cada email nuevo
+// Escucha la bandeja de entrada con IMAP IDLE y llama onMessage(parsedMail) por cada email nuevo.
+// Si la conexión se cae (timeout de Gmail, red, etc.) reconecta sola.
 export async function startEmailListener(onMessage) {
-  const client = new ImapFlow({
-    host: process.env.EMAIL_IMAP_HOST,
-    port: parseInt(process.env.EMAIL_IMAP_PORT || '993'),
-    secure: true,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD,
-    },
-    logger: false,
-  });
-
-  await client.connect();
-  console.log('📧 IMAP conectado — escuchando bandeja de entrada');
+  let client;
+  let reconnecting = false;
 
   async function checkNewMessages() {
+    if (!client?.usable) throw new Error('Connection not available');
     const lock = await client.getMailboxLock('INBOX');
     try {
-      // Buscar no leídos
       const uids = await client.search({ seen: false });
       for (const uid of uids) {
         if (processedUids.has(uid)) continue;
@@ -74,17 +64,59 @@ export async function startEmailListener(onMessage) {
     }
   }
 
-  // Revisión inicial
-  await checkNewMessages();
+  async function reconnect() {
+    if (reconnecting) return;
+    reconnecting = true;
+    console.log('📧 IMAP desconectado — reconectando en 10s...');
+    await new Promise((r) => setTimeout(r, 10000));
+    try {
+      await connect();
+    } catch (err) {
+      console.error(`[EMAIL RECONNECT ERROR] ${err.message}`);
+      reconnecting = false;
+      setTimeout(reconnect, 10000);
+    }
+  }
 
-  // IMAP IDLE: espera notificaciones del servidor en tiempo real
-  client.on('exists', () => {
-    checkNewMessages().catch((err) => console.error(`[EMAIL POLL ERROR] ${err.message}`));
-  });
+  async function connect() {
+    client = new ImapFlow({
+      host: process.env.EMAIL_IMAP_HOST,
+      port: parseInt(process.env.EMAIL_IMAP_PORT || '993'),
+      secure: true,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+      logger: false,
+    });
 
-  // Fallback: revisar cada 2 minutos por si el IDLE se cae
+    client.on('close', () => {
+      console.log('📧 IMAP cerró la conexión');
+      reconnect();
+    });
+    client.on('error', (err) => {
+      console.error(`[IMAP ERROR] ${err.message}`);
+    });
+
+    await client.connect();
+    console.log('📧 IMAP conectado — escuchando bandeja de entrada');
+    reconnecting = false;
+
+    client.on('exists', () => {
+      checkNewMessages().catch((err) => console.error(`[EMAIL POLL ERROR] ${err.message}`));
+    });
+
+    await checkNewMessages();
+  }
+
+  await connect();
+
+  // Fallback: revisar cada 2 minutos por si el IDLE no avisa
   setInterval(() => {
-    checkNewMessages().catch((err) => console.error(`[EMAIL POLL ERROR] ${err.message}`));
+    checkNewMessages().catch((err) => {
+      console.error(`[EMAIL POLL ERROR] ${err.message}`);
+      if (err.message === 'Connection not available') reconnect();
+    });
   }, 2 * 60 * 1000);
 
   return client;

@@ -55,3 +55,100 @@ export const EMAIL_TOQUE_4 = (pais, dmName) => {
 // Respuesta cuando dicen que no son el decisor
 export const EMAIL_NO_ES_DECISOR = () =>
   `Entendido, gracias! ¿Me podría pasar el contacto (email) de la persona que toma esas decisiones para escribirle directamente?`;
+
+// ─── SECUENCIA FRANQUICIAS (RE/MAX y Century 21) ───────────────────────────
+// Ángulo: retención y atracción de asesores · Días 1, 3, 8, 15
+
+function casoFranquicia(franquicia) {
+  const f = (franquicia || '').toLowerCase();
+  if (f.includes('remax') || f.includes('re/max') || f.includes('re max')) return 'RE/MAX Impacta';
+  if (f.includes('century') || f.includes('c21')) return 'C21 Seven';
+  return 'RE/MAX Impacta';
+}
+
+function nombreFranquicia(franquicia) {
+  const f = (franquicia || '').toLowerCase();
+  if (f.includes('remax') || f.includes('re/max') || f.includes('re max')) return 'RE/MAX';
+  if (f.includes('century') || f.includes('c21')) return 'C21';
+  return 'RE/MAX';
+}
+
+function pruebaFranquicia(franquicia) {
+  const f = (franquicia || '').toLowerCase();
+  if (f.includes('remax') || f.includes('re/max') || f.includes('re max'))
+    return 'RE/MAX Impacta: agendaron +25 visitas en 60 días sin sumar un solo asesor nuevo al equipo.';
+  return 'C21 Seven: 44 asesores integrados al sistema en Paraguay, sin fricciones.';
+}
+
+// FRANQUICIA TOQUE 1 — Día 1
+export const EMAIL_FRANQUICIA_TOQUE_1 = (franquicia, dmName) => {
+  const marca = nombreFranquicia(franquicia);
+  return {
+    subject: `¿Cuántos de sus asesores nuevos siguen activos hoy?`,
+    text: `${saludo(dmName)}
+
+Le escribo desde Sifer, trabajamos con oficinas ${marca} en la región.
+
+Quería hacerle una pregunta directa: ¿cuántos asesores nuevos sumó su oficina en los últimos 3 meses? Y de esos, ¿cuántos siguen activos hoy?
+
+Si la respuesta no es tan buena como le gustaría, no es un problema aislado — es el patrón que vemos en la mayoría de las oficinas de la red.
+
+¿Le interesa que le cuente en 20 minutos qué está haciendo distinto la oficina que sí lo resolvió?
+
+Si usted no es quien toma esta decisión, le agradezco si me indica a quién puedo escribirle.
+
+${FIRMA()}`,
+  };
+};
+
+// FRANQUICIA TOQUE 2 — Día 3 (mismo hilo)
+export const EMAIL_FRANQUICIA_TOQUE_2 = (franquicia, dmName) => {
+  return {
+    subjectPrefix: 'Re: ',
+    text: `${saludo(dmName)}
+
+Sumo un dato al mensaje anterior: en la mayoría de los casos que vemos, no es un tema de reclutar más — es que los asesores buenos se terminan yendo a la oficina que les da mejores leads y sistema, no a la que mejor comisión paga.
+
+Y esto no es solo para equipos grandes: lo estamos viendo tanto en oficinas de 6-8 asesores como en equipos de 40+.
+
+¿Le pasó con algún asesor fuerte del equipo en el último tiempo?
+
+${FIRMA()}`,
+  };
+};
+
+// FRANQUICIA TOQUE 3 — Día 8 (nuevo hilo)
+export const EMAIL_FRANQUICIA_TOQUE_3 = (franquicia, dmName) => {
+  const caso = casoFranquicia(franquicia);
+  const prueba = pruebaFranquicia(franquicia);
+  return {
+    subject: `Lo que está usando ${caso} para no perder asesores`,
+    text: `${saludo(dmName)}
+
+Le cuento brevemente en qué consiste lo que mencioné: un sistema que atiende y califica leads con IA las 24 horas y se los entrega listos a su equipo comercial — sin que nada se pierda entre la generación y el cierre.
+
+Eso termina siendo el diferencial real para atraer y retener a los asesores que ya tiene.
+
+Ya lo está usando ${prueba}
+
+¿Le sirve que se lo muestre en una llamada de 20 minutos, sin compromiso? ¿Mañana o el miércoles?
+
+${FIRMA()}`,
+  };
+};
+
+// FRANQUICIA TOQUE 4 — Día 15
+export const EMAIL_FRANQUICIA_TOQUE_4 = (franquicia, dmName) => {
+  return {
+    subject: `Último mensaje de mi parte`,
+    text: `${saludo(dmName)}
+
+Le dejo este como último email de mi parte — no quiero ser invasivo.
+
+Si en algún momento retener o atraer asesores fuertes vuelve a ser prioridad para la oficina, quedo disponible.
+
+Lo sigo por LinkedIn de todas formas, por si le sirve ver ahí lo que compartimos sobre este tema.
+
+${FIRMA()}`,
+  };
+};

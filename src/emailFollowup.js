@@ -8,7 +8,10 @@ import {
 import { sendEmail } from './email.js';
 import { enqueueEmail } from './emailScheduler.js';
 import { isWithinSendWindow } from './sendWindow.js';
-import { EMAIL_TOQUE_2, EMAIL_TOQUE_3, EMAIL_TOQUE_4 } from '../data/emailSequences.js';
+import {
+  EMAIL_TOQUE_2, EMAIL_TOQUE_3, EMAIL_TOQUE_4,
+  EMAIL_FRANQUICIA_TOQUE_2, EMAIL_FRANQUICIA_TOQUE_3, EMAIL_FRANQUICIA_TOQUE_4,
+} from '../data/emailSequences.js';
 
 const CHECK_INTERVAL_MS = 10 * 60 * 1000; // cada 10 minutos (la ventana es de 1hs, hay que revisar seguido)
 
@@ -36,13 +39,22 @@ async function sendToque(prospect, stageAfter, buildFn, isReply) {
 
 async function runEmailSequenceCheck() {
   for (const prospect of getEmailDueForToque2()) {
-    await sendToque(prospect, 'TOQUE_2_SENT', EMAIL_TOQUE_2, true);
+    const fn = prospect.franquicia?.trim()
+      ? (f, n) => EMAIL_FRANQUICIA_TOQUE_2(f, n)
+      : (f, n) => EMAIL_TOQUE_2(prospect.country, n);
+    await sendToque(prospect, 'TOQUE_2_SENT', (_, n) => fn(prospect.franquicia, n), true);
   }
   for (const prospect of getEmailDueForToque3()) {
-    await sendToque(prospect, 'TOQUE_3_SENT', EMAIL_TOQUE_3, false);
+    const fn = prospect.franquicia?.trim()
+      ? (f, n) => EMAIL_FRANQUICIA_TOQUE_3(f, n)
+      : (f, n) => EMAIL_TOQUE_3(prospect.country, n);
+    await sendToque(prospect, 'TOQUE_3_SENT', (_, n) => fn(prospect.franquicia, n), false);
   }
   for (const prospect of getEmailDueForToque4()) {
-    await sendToque(prospect, 'TOQUE_4_SENT', EMAIL_TOQUE_4, false);
+    const fn = prospect.franquicia?.trim()
+      ? (f, n) => EMAIL_FRANQUICIA_TOQUE_4(f, n)
+      : (f, n) => EMAIL_TOQUE_4(prospect.country, n);
+    await sendToque(prospect, 'TOQUE_4_SENT', (_, n) => fn(prospect.franquicia, n), false);
   }
   for (const prospect of getEmailDueForNoReply()) {
     await updateProspect(prospect.id, { email_stage: 'NO_REPLY' });

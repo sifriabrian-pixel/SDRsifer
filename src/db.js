@@ -36,6 +36,7 @@ export function initDb() {
       email_message_id TEXT,
       email_subject TEXT,
       email_first_sent_at TEXT,
+      franquicia TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
@@ -54,6 +55,7 @@ export function initDb() {
     email_message_id: `ALTER TABLE prospects ADD COLUMN email_message_id TEXT`,
     email_subject: `ALTER TABLE prospects ADD COLUMN email_subject TEXT`,
     email_first_sent_at: `ALTER TABLE prospects ADD COLUMN email_first_sent_at TEXT`,
+    franquicia: `ALTER TABLE prospects ADD COLUMN franquicia TEXT`,
   };
   for (const [col, sql] of Object.entries(migrations)) {
     if (!existingCols.includes(col)) db.exec(sql);
@@ -184,28 +186,43 @@ export function getEmailDueForToque2() {
 }
 
 export function getEmailDueForToque3() {
+  // Franquicias: día 8 / Independientes: día 10
   return getDb().prepare(`
     SELECT * FROM prospects
     WHERE email_stage = 'TOQUE_2_SENT'
-    AND email_first_sent_at <= datetime('now', '-10 days')
+    AND (
+      (franquicia IS NOT NULL AND franquicia != '' AND email_first_sent_at <= datetime('now', '-8 days'))
+      OR
+      ((franquicia IS NULL OR franquicia = '') AND email_first_sent_at <= datetime('now', '-10 days'))
+    )
     AND (email_last_reply_at IS NULL OR email_last_reply_at < email_first_sent_at)
   `).all();
 }
 
 export function getEmailDueForToque4() {
+  // Franquicias: día 15 / Independientes: día 17
   return getDb().prepare(`
     SELECT * FROM prospects
     WHERE email_stage = 'TOQUE_3_SENT'
-    AND email_first_sent_at <= datetime('now', '-17 days')
+    AND (
+      (franquicia IS NOT NULL AND franquicia != '' AND email_first_sent_at <= datetime('now', '-15 days'))
+      OR
+      ((franquicia IS NULL OR franquicia = '') AND email_first_sent_at <= datetime('now', '-17 days'))
+    )
     AND (email_last_reply_at IS NULL OR email_last_reply_at < email_first_sent_at)
   `).all();
 }
 
 export function getEmailDueForNoReply() {
+  // Franquicias: día 22 / Independientes: día 24
   return getDb().prepare(`
     SELECT * FROM prospects
     WHERE email_stage = 'TOQUE_4_SENT'
-    AND email_first_sent_at <= datetime('now', '-24 days')
+    AND (
+      (franquicia IS NOT NULL AND franquicia != '' AND email_first_sent_at <= datetime('now', '-22 days'))
+      OR
+      ((franquicia IS NULL OR franquicia = '') AND email_first_sent_at <= datetime('now', '-24 days'))
+    )
     AND (email_last_reply_at IS NULL OR email_last_reply_at < email_first_sent_at)
   `).all();
 }

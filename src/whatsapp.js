@@ -181,7 +181,7 @@ export async function startWhatsApp() {
     }, 3000);
   }
 
-  const ready = new Promise((resolve) => {
+  const ready = new Promise((resolve, reject) => {
     let isOpen = false;
     let chatsLoaded = false;
 
@@ -195,7 +195,10 @@ export async function startWhatsApp() {
         const shouldReconnect = code !== DisconnectReason.loggedOut;
         console.log(`Conexión cerrada (${code}). Reconectando: ${shouldReconnect}`);
         if (shouldReconnect) setTimeout(startWhatsApp, 5000);
-        else console.log('Sesión cerrada. Borrá sessions/ y reiniciá.');
+        else {
+          console.log('Sesión cerrada. Borrá sessions/ y reiniciá.');
+          reject(new Error(`WhatsApp sesión expirada (${code})`));
+        }
       }
       if (connection === 'open') {
         console.log('✅ WhatsApp conectado — cargando chats...');

@@ -69,10 +69,19 @@ async function main() {
   }
 
   // ── Modo normal: escuchar respuestas + esperar pedidos de lanzamiento ────
-  await startWhatsApp();
-  console.log('Agente activo — escuchando respuestas entrantes.');
-  startFollowupScheduler();
-  startLaunchRequestWatcher();
+  if (process.env.AGENT_PHONE) {
+    try {
+      await startWhatsApp();
+      console.log('Agente activo — escuchando respuestas entrantes.');
+      startFollowupScheduler();
+      startLaunchRequestWatcher();
+    } catch (err) {
+      console.error('[WHATSAPP] No se pudo conectar:', err.message);
+      console.log('⚠️  Continuando sin WhatsApp — solo canal de email activo.');
+    }
+  } else {
+    console.log('📵 WhatsApp desactivado (AGENT_PHONE no configurado)');
+  }
   startEmailChannel();
 }
 

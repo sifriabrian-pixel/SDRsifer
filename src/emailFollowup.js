@@ -39,22 +39,22 @@ async function sendToque(prospect, stageAfter, buildFn, isReply) {
 
 async function runEmailSequenceCheck() {
   for (const prospect of getEmailDueForToque2()) {
-    const fn = prospect.franquicia?.trim()
-      ? (f, n) => EMAIL_FRANQUICIA_TOQUE_2(f, n)
-      : (f, n) => EMAIL_TOQUE_2(prospect.country, n);
-    await sendToque(prospect, 'TOQUE_2_SENT', (_, n) => fn(prospect.franquicia, n), true);
+    const buildFn = prospect.franquicia?.trim()
+      ? (_, n) => EMAIL_FRANQUICIA_TOQUE_2(prospect.franquicia, n, prospect.gatekeeper_email, prospect.agency_name)
+      : (_, n) => EMAIL_TOQUE_2(prospect.country, n);
+    await sendToque(prospect, 'TOQUE_2_SENT', buildFn, true);
   }
   for (const prospect of getEmailDueForToque3()) {
-    const fn = prospect.franquicia?.trim()
-      ? (f, n) => EMAIL_FRANQUICIA_TOQUE_3(f, n)
-      : (f, n) => EMAIL_TOQUE_3(prospect.country, n);
-    await sendToque(prospect, 'TOQUE_3_SENT', (_, n) => fn(prospect.franquicia, n), false);
+    const buildFn = prospect.franquicia?.trim()
+      ? (_, n) => EMAIL_FRANQUICIA_TOQUE_3(prospect.franquicia, n, prospect.gatekeeper_email, prospect.agency_name)
+      : (_, n) => EMAIL_TOQUE_3(prospect.country, n);
+    await sendToque(prospect, 'TOQUE_3_SENT', buildFn, false);
   }
   for (const prospect of getEmailDueForToque4()) {
-    const fn = prospect.franquicia?.trim()
-      ? (f, n) => EMAIL_FRANQUICIA_TOQUE_4(f, n)
-      : (f, n) => EMAIL_TOQUE_4(prospect.country, n);
-    await sendToque(prospect, 'TOQUE_4_SENT', (_, n) => fn(prospect.franquicia, n), false);
+    const buildFn = prospect.franquicia?.trim()
+      ? (_, n) => EMAIL_FRANQUICIA_TOQUE_4(prospect.franquicia, n, prospect.gatekeeper_email, prospect.agency_name)
+      : (_, n) => EMAIL_TOQUE_4(prospect.country, n);
+    await sendToque(prospect, 'TOQUE_4_SENT', buildFn, false);
   }
   for (const prospect of getEmailDueForNoReply()) {
     await updateProspect(prospect.id, { email_stage: 'NO_REPLY' });

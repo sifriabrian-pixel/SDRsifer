@@ -10,8 +10,22 @@ function casoPorPais(pais) {
   return 'C21 Seven';
 }
 
-function saludo(dmName) {
-  return dmName && dmName.trim() ? `Hola ${dmName.trim()},` : 'Hola,';
+function saludo(dmName, email, agencyName) {
+  // Si hay nombre explícito del DM, usarlo
+  if (dmName && dmName.trim()) return `Hola ${dmName.trim()},`;
+  // Si el email tiene un nombre personal (alex@remax.com → "Alex")
+  if (email) {
+    const local = email.split('@')[0].toLowerCase();
+    const genericos = ['info', 'contacto', 'contact', 'ventas', 'admin', 'oficina', 'hello', 'hola', 'hello', 'soporte'];
+    if (!genericos.some(g => local.startsWith(g))) {
+      // Es un nombre personal — capitalizar primera letra
+      const nombre = local.charAt(0).toUpperCase() + local.slice(1).split('.')[0];
+      return `Hola ${nombre},`;
+    }
+  }
+  // Email genérico — usar nombre de la agencia si está disponible
+  if (agencyName && agencyName.trim()) return `Hola equipo de ${agencyName.trim()},`;
+  return 'Hola,';
 }
 
 const FIRMA = () => {
@@ -81,11 +95,11 @@ function pruebaFranquicia(franquicia) {
 }
 
 // FRANQUICIA TOQUE 1 — Día 1
-export const EMAIL_FRANQUICIA_TOQUE_1 = (franquicia, dmName) => {
+export const EMAIL_FRANQUICIA_TOQUE_1 = (franquicia, dmName, email, agencyName) => {
   const marca = nombreFranquicia(franquicia);
   return {
     subject: `¿Cuántos de sus asesores nuevos siguen activos hoy?`,
-    text: `${saludo(dmName)}
+    text: `${saludo(dmName, email, agencyName)}
 
 Le escribo desde Sifer, trabajamos con oficinas ${marca} en la región.
 
@@ -102,10 +116,10 @@ ${FIRMA()}`,
 };
 
 // FRANQUICIA TOQUE 2 — Día 3 (mismo hilo)
-export const EMAIL_FRANQUICIA_TOQUE_2 = (franquicia, dmName) => {
+export const EMAIL_FRANQUICIA_TOQUE_2 = (franquicia, dmName, email, agencyName) => {
   return {
     subjectPrefix: 'Re: ',
-    text: `${saludo(dmName)}
+    text: `${saludo(dmName, email, agencyName)}
 
 Sumo un dato al mensaje anterior: en la mayoría de los casos que vemos, no es un tema de reclutar más — es que los asesores buenos se terminan yendo a la oficina que les da mejores leads y sistema, no a la que mejor comisión paga.
 
@@ -118,12 +132,12 @@ ${FIRMA()}`,
 };
 
 // FRANQUICIA TOQUE 3 — Día 8 (nuevo hilo)
-export const EMAIL_FRANQUICIA_TOQUE_3 = (franquicia, dmName) => {
+export const EMAIL_FRANQUICIA_TOQUE_3 = (franquicia, dmName, email, agencyName) => {
   const caso = casoFranquicia(franquicia);
   const prueba = pruebaFranquicia(franquicia);
   return {
     subject: `Lo que está usando ${caso} para no perder asesores`,
-    text: `${saludo(dmName)}
+    text: `${saludo(dmName, email, agencyName)}
 
 Le cuento brevemente en qué consiste lo que mencioné: un sistema que atiende y califica leads con IA las 24 horas y se los entrega listos a su equipo comercial — sin que nada se pierda entre la generación y el cierre.
 
@@ -138,10 +152,10 @@ ${FIRMA()}`,
 };
 
 // FRANQUICIA TOQUE 4 — Día 15
-export const EMAIL_FRANQUICIA_TOQUE_4 = (franquicia, dmName) => {
+export const EMAIL_FRANQUICIA_TOQUE_4 = (franquicia, dmName, email, agencyName) => {
   return {
     subject: `Último mensaje de mi parte`,
-    text: `${saludo(dmName)}
+    text: `${saludo(dmName, email, agencyName)}
 
 Le dejo este como último email de mi parte — no quiero ser invasivo.
 

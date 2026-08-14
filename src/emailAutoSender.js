@@ -46,7 +46,7 @@ async function checkAndSend() {
       try {
         const esFranquicia = prospect.franquicia && prospect.franquicia.trim();
         const { subject, text } = esFranquicia
-          ? EMAIL_FRANQUICIA_TOQUE_1(prospect.franquicia, prospect.dm_name)
+          ? EMAIL_FRANQUICIA_TOQUE_1(prospect.franquicia, prospect.dm_name, prospect.gatekeeper_email, prospect.agency_name)
           : EMAIL_TOQUE_1(prospect.country, prospect.dm_name);
         const info = await enqueueEmail(() => sendEmail({ to: prospect.gatekeeper_email, subject, text }));
         const now = new Date().toISOString();

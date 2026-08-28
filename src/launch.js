@@ -29,7 +29,7 @@ export async function runLaunchBatch(limit) {
 
       const { jid, lid } = resolved;
 
-      if (chatExists(jid) || (lid && chatExists(lid))) {
+      if ((await chatExists(jid)) || (lid && (await chatExists(lid)))) {
         await updateProspect(prospect.id, { stage: 'SKIPPED', gatekeeper_jid: jid, gatekeeper_lid: lid });
         console.log(`[SKIP]  ${prospect.agency_name} — ya tiene conversación activa`);
         saltados++;

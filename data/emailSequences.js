@@ -29,7 +29,7 @@ function saludo(dmName, email, agencyName) {
 }
 
 const FIRMA = () => {
-  const nombre = process.env.SDR_NAME || 'Marcos';
+  const nombre = process.env.SDR_NAME || 'Brian';
   return `${nombre} — Sifer\nsifer.pro`;
 };
 

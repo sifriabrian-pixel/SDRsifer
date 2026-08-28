@@ -15,7 +15,7 @@ let processedUids = new Set(); // evita reprocesar el mismo correo dos veces en 
 
 // Envía un email vía Resend. Si inReplyTo viene, responde en el mismo hilo (In-Reply-To/References)
 export async function sendEmail({ to, subject, text, inReplyTo = null }) {
-  const fromName = process.env.SDR_NAME || 'Marcos';
+  const fromName = process.env.SDR_NAME || 'Brian';
   const headers = {};
   if (inReplyTo) {
     headers['In-Reply-To'] = inReplyTo;

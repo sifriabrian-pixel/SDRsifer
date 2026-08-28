@@ -13,15 +13,14 @@ export const FASE1_INICIAL = `Buen día ¿Cómo están? Queria hacer una consult
 
 // ETAPA 1 — Mensaje 2: identificación + pedido al DM
 export const FASE2_PORTERO_PRINCIPAL = (pais) => {
-  const nombre = process.env.SDR_NAME || 'Marcos';
-  return `Un gusto saludarte, Mi nombre es ${nombre}, soy del equipo de Sifer. Nos especializamos en ayudar a inmobiliarias de la región a mejorar la captación, atención y el seguimiento de sus potenciales clientes de manera totalmente automática.\n\nQuería comunicarme con el director o responsable comercial de la oficina para contarle brevemente sobre los resultados que estamos viendo con otras inmobiliarias en ${pais}.\n\n¿Me podrían ayudar a contactarlo?`;
+  return `Un gusto saludarte, Mi nombre es Brian, soy del equipo de Sifer. Nos especializamos en ayudar a inmobiliarias de la región a mejorar la captación, atención y el seguimiento de sus potenciales clientes de manera totalmente automática.\n\nQuería comunicarme con el director o responsable comercial de la oficina para contarle brevemente sobre los resultados que estamos viendo con otras inmobiliarias en ${pais}.\n\n¿Me podrían ayudar a contactarlo?`;
 };
 
 // ETAPA 1 — Bifurcaciones del portero
 export const FASE2_OBJECIONES = {
   // 3A: preguntan "¿de qué se trata?" o "¿qué resultados?"
   que_se_trata: (pais) =>
-    `Claro, te comento! Trabajamos con inmobiliarias en ${pais} y lo que más logran es que los asesores siempre tengan prospectos activos para contactar, sin perder leads por falta de seguimiento.\n\nPara ver si aplica a su operación necesito hablar con quien maneja el área comercial o la oficina en general para conocer mas a fondo como trabajan. ¿Me podés pasar su contacto?`,
+    `Claro, te comento! Somos un sistema comercial completo especificamente para el mercado inmobiliario — combinamos pauta publicitaria segmentada con el objetivo de llevarle a tu equipo leads calificados todos los dias con un agente de IA que atiende ,da seguimiento 24/7 y se lo deriva a tu equipo comercial cuando estan calificados. Para ver si aplica a su operación necesito hablar con quien maneja el área comercial o la oficina en general para conocer mas a fondo como trabajan. ¿Me podés pasar su contacto?`,
 
   // 3B: portero dice "yo puedo ayudarte" → preguntar si es decisor
   calificar_portero: () =>
@@ -45,8 +44,7 @@ export const FASE2_OBJECIONES = {
 
   // Fallback cuando no dan absolutamente nada (3D/3E sin datos)
   no_dan_nada: (pais) => {
-    const nombre = process.env.SDR_NAME || 'Marcos';
-    return `Entiendo, gracias igual. Si pudiera hacerle llegar esto de mi parte le agradezco:\n\n"Hola, le escribe ${nombre} de Sifer. Trabajamos con inmobiliarias en ${pais} para que el equipo de asesores siempre tenga prospectos activos. Otros directores de la región nos pidieron 20 minutos y los resultados los sorprendieron. Si le interesa, con gusto lo contacto. Gracias!"`;
+    return `Entiendo, gracias igual. Si pudiera hacerle llegar esto de mi parte le agradezco:\n\n"Hola, le escribe Brian de Sifer. Trabajamos con inmobiliarias en ${pais} para que el equipo de asesores siempre tenga prospectos activos. Otros directores de la región nos pidieron 20 minutos y los resultados los sorprendieron. Si le interesa, con gusto lo contacto. Gracias!"`;
   },
 
   // 3F: dicen "ya tenemos ese servicio" / "no nos interesa" / "no lo necesitamos"
@@ -70,15 +68,16 @@ export const FASE2_FOLLOWUP = `Hola, quería saber si pudieron ver mi mensaje de
 
 // ETAPA 2 — Mensaje 1A: contacto directo al DM (portero dio número)
 export const FASE3_APERTURA = (dmName, pais) => {
-  const nombre = process.env.SDR_NAME || 'Marcos';
   const usarNombre = dmName && dmName !== 'hola' && dmName !== 'te';
   const saludo = usarNombre ? `Buen día ${dmName}! 👋` : `Buen día! 👋`;
-  return `${saludo} Le escribo de parte de Sifer, ${nombre} es mi nombre.\n\nMe contacté con su oficina porque trabajamos con inmobiliarias en ${pais} ayudando a que los asesores siempre tengan prospectos activos para contactar, sin depender solo de los portales.\n\n¿Le cuento brevemente cómo lo hacemos?`;
+  return `${saludo} Le escribo de parte de Sifer, Brian es mi nombre.Te escribo porque trabajamos con inmobiliarias de la región con un sistema Comercial que les genera y atiende, todos los meses, potenciales clientes calificados para tu equipo de vendedores
+¿Te parece si te cuento brevemente como lo hacemos y si te interesa coordinamos una reunión?`;
 };
 
 // ETAPA 2 — Mensaje 1B: el portero confirmó ser DM (3B) — pitch directo en tuteo
 export const FASE3_APERTURA_B = () =>
-  `Buenísimo. Lo que hacemos es básicamente asegurarnos de que tu equipo de asesores siempre tenga prospectos activos para contactar.\n\nLo logramos combinando captación de leads con Meta Ads, calificación automática con IA y un sistema de seguimiento para que ningún lead se pierda en el camino por enfriarse.\n\nLo están usando +50 inmobiliarias y el cambio más grande que notaron fue que empezaron a tener un sistema propio que les genera clientes todos los meses.\n\n¿Tenés 20 minutos esta semana para verlo aplicado a tu operación?`;
+  `Genial , Te cuento rápido : no somos una agencia de marketing ni una herramienta suelta
+Somos un sistema comercial completo especificamente para el mercado inmobiliario — combinamos pauta publicitaria segmentada con el objetivo de llevarle a tu equipo leads calificados todos los dias con un agente de IA que atiende ,da seguimiento 24/7 y se lo deriva a tu equipo comercial cuando estan calificados, todo integrado en un mismo proceso, sin que nada se pierda entre la generación y el cierre\n\n¿Tenés 20 minutos esta semana para verlo aplicado a tu operación?`;
 
 // ETAPA 2 — 2A: pitch completo (enviado cuando el DM responde al 1A con interés/pregunta)
 export const FASE3_PITCH = (pais) =>

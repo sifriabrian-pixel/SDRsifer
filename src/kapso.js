@@ -41,16 +41,25 @@ export async function resolveJid(phone) {
 }
 
 // Ya no existe el concepto de "chats cargados" del socket de Baileys.
-// Usamos el estado ya guardado en la DB: si el prospecto no está en PENDING, ya le escribimos antes.
-export function chatExists(jid) {
+// Chequeamos dos cosas: 1) nuestra propia DB (ya le escribimos antes en esta campaña),
+// 2) la API de Conversaciones de Kapso (ya existe un chat con ese número, aunque no
+//    lo hayamos originado nosotros — evita reabrir con un lead/cliente existente).
+export async function chatExists(jid) {
   try {
     const db = getDb();
     const row = db.prepare(
       `SELECT 1 FROM prospects WHERE (gatekeeper_jid = ? OR dm_jid = ?) AND stage != 'PENDING' LIMIT 1`
     ).get(jid, jid);
-    return !!row;
-  } catch {
-    return false;
+    if (row) return true;
+  } catch {}
+
+  try {
+    const to = phoneFromJid(jid);
+    const result = await client.conversations.list({ phoneNumberId, phoneNumber: to, limit: 1 });
+    return (result?.data?.length || 0) > 0;
+  } catch (err) {
+    console.error('[KAPSO] Error chequeando conversación existente:', err.message);
+    return false; // ante la duda, no bloquear el envío por un error de red/API
   }
 }
 

@@ -23,6 +23,9 @@ async function startTransport() {
 }
 
 function startEmailChannel() {
+  if (process.env.EMAIL_CHANNEL !== 'on') {
+    return; // canal de email apagado — el foco volvió a WhatsApp (Kapso)
+  }
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
     console.log('📧 Canal de email desactivado (faltan EMAIL_USER / EMAIL_PASSWORD)');
     return;
@@ -89,7 +92,6 @@ async function main() {
       startLaunchRequestWatcher();
     } catch (err) {
       console.error('[TRANSPORT] No se pudo conectar:', err.message);
-      console.log('⚠️  Continuando sin WhatsApp — solo canal de email activo.');
     }
   } else {
     console.log('📵 WhatsApp desactivado (AGENT_PHONE no configurado)');

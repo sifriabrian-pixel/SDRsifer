@@ -1,6 +1,5 @@
 import { getPendingProspects, updateProspect } from './db.js';
-import { sendMessage, resolveJid, chatExists } from './whatsapp.js';
-import { FASE1_INICIAL } from '../data/sequences.js';
+import { resolveJid, chatExists, sendFase1 } from './transport.js';
 
 export async function runLaunchBatch(limit) {
   console.log(`\n🚀 Enviando mensajes a ${limit} prospectos nuevos...\n`);
@@ -43,7 +42,7 @@ export async function runLaunchBatch(limit) {
         gatekeeper_lid: lid,
         last_message_at: new Date().toISOString(),
       });
-      await sendMessage(jid, FASE1_INICIAL);
+      await sendFase1(jid);
       console.log(`[SENT]  ${prospect.agency_name} → ${jid}`);
       enviados++;
     }

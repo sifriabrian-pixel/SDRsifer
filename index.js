@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import { initDb, updateProspect } from './src/db.js';
-import { startWhatsApp, resolveJid } from './src/whatsapp.js';
 import { importCsv } from './data/prospects.js';
 import { startFollowupScheduler } from './src/followup.js';
 import { runLaunchBatch } from './src/launch.js';
@@ -10,6 +9,18 @@ import { handleIncomingEmail } from './src/emailRouter.js';
 import { startEmailFollowupScheduler } from './src/emailFollowup.js';
 import { startEmailAutoSender } from './src/emailAutoSender.js';
 import path from 'path';
+
+const TRANSPORT = process.env.TRANSPORT === 'kapso' ? 'kapso' : 'baileys';
+
+async function startTransport() {
+  if (TRANSPORT === 'kapso') {
+    const { startKapsoServer } = await import('./src/kapsoWebhookServer.js');
+    startKapsoServer();
+    return;
+  }
+  const { startWhatsApp } = await import('./src/whatsapp.js');
+  await startWhatsApp();
+}
 
 function startEmailChannel() {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
@@ -42,7 +53,7 @@ async function main() {
   // ── Comando: lanzar lote (uso local, sin Railway corriendo en paralelo) ──
   if (args[0] === 'launch') {
     const limit = parseInt(args[1]) || 50;
-    await startWhatsApp();
+    await startTransport();
     await runLaunchBatch(limit);
     console.log('Agente activo — escuchando respuestas entrantes.\n');
     startFollowupScheduler();
@@ -51,8 +62,9 @@ async function main() {
     // No hay return — el proceso queda vivo escuchando respuestas
   }
 
-  // ── Comando: migrar LIDs de prospectos viejos ───────────────────────────
+  // ── Comando: migrar LIDs de prospectos viejos (solo Baileys) ────────────
   if (args[0] === 'fix-lids') {
+    const { startWhatsApp, resolveJid } = await import('./src/whatsapp.js');
     await startWhatsApp();
     const { getDb } = await import('./src/db.js');
     const rows = getDb().prepare(`SELECT id, gatekeeper_phone FROM prospects WHERE stage = 'FASE1_SENT' AND gatekeeper_lid IS NULL`).all();
@@ -69,14 +81,14 @@ async function main() {
   }
 
   // ── Modo normal: escuchar respuestas + esperar pedidos de lanzamiento ────
-  if (process.env.AGENT_PHONE) {
+  if (TRANSPORT === 'kapso' || process.env.AGENT_PHONE) {
     try {
-      await startWhatsApp();
-      console.log('Agente activo — escuchando respuestas entrantes.');
+      await startTransport();
+      console.log(`Agente activo (${TRANSPORT}) — escuchando respuestas entrantes.`);
       startFollowupScheduler();
       startLaunchRequestWatcher();
     } catch (err) {
-      console.error('[WHATSAPP] No se pudo conectar:', err.message);
+      console.error('[TRANSPORT] No se pudo conectar:', err.message);
       console.log('⚠️  Continuando sin WhatsApp — solo canal de email activo.');
     }
   } else {

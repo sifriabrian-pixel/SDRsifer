@@ -1,5 +1,5 @@
 import { updateProspect } from './db.js';
-import { sendMessage } from './whatsapp.js';
+import { sendMessage } from './transport.js';
 import { sendHandoff } from './notifier.js';
 import {
   classifyGatekeeperReply,

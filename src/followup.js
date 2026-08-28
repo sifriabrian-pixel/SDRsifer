@@ -1,5 +1,5 @@
 import { getProspectsNeedingFollowup, getProspectsNoReply, updateProspect } from './db.js';
-import { sendMessage } from './whatsapp.js';
+import { sendFollowup } from './transport.js';
 import { FASE2_FOLLOWUP } from '../data/sequences.js';
 
 const CHECK_INTERVAL_MS = 30 * 60 * 1000; // revisar cada 30 minutos
@@ -11,7 +11,7 @@ async function runFollowupCheck() {
     try {
       const jid = prospect.gatekeeper_jid;
       if (!jid) continue;
-      await sendMessage(jid, FASE2_FOLLOWUP);
+      await sendFollowup(jid, FASE2_FOLLOWUP);
       await updateProspect(prospect.id, {
         stage: 'FASE2_FOLLOWUP_SENT',
         last_message_at: new Date().toISOString(),

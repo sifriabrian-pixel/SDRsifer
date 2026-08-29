@@ -65,6 +65,41 @@ async function main() {
     // No hay return — el proceso queda vivo escuchando respuestas
   }
 
+  // ── Comando: prospecto de prueba manual — ignora a propósito el chequeo
+  //    de "conversación existente" (es justamente para probar con un número
+  //    que ya tiene chat abierto). Correr en el mismo proceso que ya está
+  //    escuchando el webhook (ej: Railway Console), no en un proceso aparte.
+  if (args[0] === 'test-lead') {
+    const phone = (args[1] || '').replace(/\D/g, '');
+    if (!phone) {
+      console.error('Uso: node index.js test-lead <telefono> [pais]');
+      process.exit(1);
+    }
+    const pais = args[2] || 'Argentina';
+    const { getDb } = await import('./src/db.js');
+    const { resolveJid, sendFase1 } = await import('./src/transport.js');
+    const db = getDb();
+
+    let prospect = db.prepare(`SELECT * FROM prospects WHERE gatekeeper_phone = ?`).get(phone);
+    if (!prospect) {
+      const info = db.prepare(
+        `INSERT INTO prospects (agency_name, gatekeeper_phone, country, stage) VALUES (?, ?, ?, 'PENDING')`
+      ).run('TEST', phone, pais);
+      prospect = db.prepare(`SELECT * FROM prospects WHERE id = ?`).get(info.lastInsertRowid);
+    }
+
+    const resolved = await resolveJid(phone);
+    const jid = resolved.jid;
+    updateProspect(prospect.id, {
+      stage: 'FASE1_SENT',
+      gatekeeper_jid: jid,
+      last_message_at: new Date().toISOString(),
+    });
+    await sendFase1(jid);
+    console.log(`[TEST-LEAD] Template enviado a ${jid} (prospecto #${prospect.id})`);
+    process.exit(0);
+  }
+
   // ── Comando: migrar LIDs de prospectos viejos (solo Baileys) ────────────
   if (args[0] === 'fix-lids') {
     const { startWhatsApp, resolveJid } = await import('./src/whatsapp.js');

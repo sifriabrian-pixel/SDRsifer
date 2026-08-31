@@ -55,8 +55,10 @@ export async function chatExists(jid) {
 
   try {
     const to = phoneFromJid(jid);
-    const result = await client.conversations.list({ phoneNumberId, phoneNumber: to, limit: 1 });
-    return (result?.data?.length || 0) > 0;
+    const result = await client.conversations.list({ phoneNumberId, phoneNumber: to, limit: 5 });
+    // Kapso puede tener registros de conversación "vacíos" (0 mensajes, status "ended")
+    // que no representan un chat real — solo cuenta si tuvo mensajes de verdad.
+    return (result?.data || []).some((c) => (c.kapso?.messagesCount || 0) > 0);
   } catch (err) {
     console.error('[KAPSO] Error chequeando conversación existente:', err.message);
     return false; // ante la duda, no bloquear el envío por un error de red/API

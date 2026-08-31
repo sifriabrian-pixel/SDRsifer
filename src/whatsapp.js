@@ -8,7 +8,6 @@ import { Boom } from '@hapi/boom';
 import pino from 'pino';
 import readline from 'readline';
 import { handleIncoming } from './router.js';
-import { setSocket } from './notifier.js';
 import { enqueue } from './scheduler.js';
 import { getDb } from './db.js';
 import { FASE1_INICIAL } from '../data/sequences.js';
@@ -98,7 +97,6 @@ export async function startWhatsApp() {
     browser: Browsers.ubuntu('Chrome'),
   });
 
-  setSocket(sock);
   sock.ev.on('creds.update', saveCreds);
 
   // Mapear contactos desde eventos

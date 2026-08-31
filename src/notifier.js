@@ -1,32 +1,14 @@
-// Envía handoff a Brian cuando se detecta interés real
-
-let sock; // referencia al socket de Baileys
-
-export function setSocket(s) {
-  sock = s;
-}
+// Envía handoff a Brian (BRIAN_PHONE) cuando se detecta interés real del DM
 
 export async function sendHandoff(prospect) {
+  const { sendMessage } = await import('./transport.js'); // import diferido: evita ciclos con whatsapp.js
   const brianJid = `${process.env.BRIAN_PHONE}@s.whatsapp.net`;
-  const canal = prospect.channel === 'email' ? '📧 Email' : '💬 WhatsApp';
+
   const dmContacto = prospect.channel === 'email'
     ? prospect.dm_email
-    : (prospect.dm_phone || prospect.dm_jid);
+    : (prospect.dm_phone || prospect.dm_jid?.split('@')[0] || 'sin número');
 
-  const msg = [
-    `🔔 *LEAD INTERESADO — HANDOFF (${canal})*`,
-    ``,
-    `*Agencia:* ${prospect.agency_name}`,
-    `*Ciudad/País:* ${prospect.city}, ${prospect.country}`,
-    ``,
-    `*Portero:* ${prospect.gatekeeper_phone || prospect.gatekeeper_email}`,
-    `*DM:* ${prospect.dm_name || 'No registrado'} — ${dmContacto}`,
-    ``,
-    `*Resumen:*`,
-    prospect.notes || 'Sin notas',
-    ``,
-    `👆 Tomá la conversación para agendar la demo.`,
-  ].join('\n');
+  const msg = `Che, revisá esta conversación con ${prospect.agency_name} (${dmContacto}) — puede haber interés 👀`;
 
-  await sock.sendMessage(brianJid, { text: msg });
+  await sendMessage(brianJid, msg);
 }

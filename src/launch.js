@@ -18,33 +18,40 @@ export async function runLaunchBatch(limit, country = null) {
     for (const prospect of batch) {
       if (enviados >= limit) break;
 
-      const resolved = await resolveJid(prospect.gatekeeper_phone);
+      try {
+        const resolved = await resolveJid(prospect.gatekeeper_phone);
 
-      if (!resolved) {
-        await updateProspect(prospect.id, { stage: 'NO_WHATSAPP' });
-        console.log(`[NO WA] ${prospect.agency_name} — número no está en WhatsApp`);
-        noWhatsapp++;
-        continue;
+        if (!resolved) {
+          await updateProspect(prospect.id, { stage: 'NO_WHATSAPP' });
+          console.log(`[NO WA] ${prospect.agency_name} — número no está en WhatsApp`);
+          noWhatsapp++;
+          continue;
+        }
+
+        const { jid, lid } = resolved;
+
+        if ((await chatExists(jid)) || (lid && (await chatExists(lid)))) {
+          await updateProspect(prospect.id, { stage: 'SKIPPED', gatekeeper_jid: jid, gatekeeper_lid: lid });
+          console.log(`[SKIP]  ${prospect.agency_name} — ya tiene conversación activa`);
+          saltados++;
+          continue;
+        }
+
+        // Mandar primero, marcar FASE1_SENT solo si el envío realmente funcionó
+        await sendFase1(jid);
+        await updateProspect(prospect.id, {
+          stage: 'FASE1_SENT',
+          gatekeeper_jid: jid,
+          gatekeeper_lid: lid,
+          last_message_at: new Date().toISOString(),
+        });
+        console.log(`[SENT]  ${prospect.agency_name} → ${jid}`);
+        enviados++;
+      } catch (err) {
+        // Un error puntual (ej: caída momentánea de la API) no debe tirar abajo todo el lote.
+        // El prospecto queda en PENDING y se reintenta en el próximo lanzamiento.
+        console.error(`[ERROR] ${prospect.agency_name} — ${(err.message || '').slice(0, 200)} — sigo con el próximo`);
       }
-
-      const { jid, lid } = resolved;
-
-      if ((await chatExists(jid)) || (lid && (await chatExists(lid)))) {
-        await updateProspect(prospect.id, { stage: 'SKIPPED', gatekeeper_jid: jid, gatekeeper_lid: lid });
-        console.log(`[SKIP]  ${prospect.agency_name} — ya tiene conversación activa`);
-        saltados++;
-        continue;
-      }
-
-      await updateProspect(prospect.id, {
-        stage: 'FASE1_SENT',
-        gatekeeper_jid: jid,
-        gatekeeper_lid: lid,
-        last_message_at: new Date().toISOString(),
-      });
-      await sendFase1(jid);
-      console.log(`[SENT]  ${prospect.agency_name} → ${jid}`);
-      enviados++;
     }
   }
 

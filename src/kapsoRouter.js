@@ -1,10 +1,16 @@
 // Equivalente a router.js pero para mensajes entrantes vía webhook de Kapso.
 // No hay LIDs en la API Oficial — siempre es el número de teléfono real.
 
-import { getProspectByJid } from './db.js';
+import { getDb, getProspectByJid } from './db.js';
 import { handleMessage } from './stateMachine.js';
 
 const processing = new Set();
+
+// Buffer por prospecto: agrupa mensajes seguidos (ej: "Hola" + "En que te ayudo?")
+// y espera un período de silencio antes de contestar, para no responder a cada
+// mensaje suelto y para dar tiempo a que la otra persona termine de escribir.
+const pending = new Map(); // prospectId -> { texts: string[], fromJid, timer }
+const DEBOUNCE_MS = 30 * 1000;
 
 export async function handleIncomingKapso(fromPhone, text) {
   if (!fromPhone || !text) return;
@@ -19,20 +25,42 @@ export async function handleIncomingKapso(fromPhone, text) {
 
   if (['DISCARDED', 'HANDED_OFF'].includes(prospect.stage)) return;
 
-  if (processing.has(prospect.id)) {
-    console.log(`[SKIP-DUP] ${prospect.agency_name} — mensaje ignorado, ya procesando otro`);
+  const existing = pending.get(prospect.id);
+  if (existing) {
+    clearTimeout(existing.timer);
+    existing.texts.push(text);
+    existing.timer = setTimeout(() => flush(prospect.id), DEBOUNCE_MS);
+    console.log(`[BUFFER] ${prospect.agency_name} — mensaje agregado (${existing.texts.length} en cola)`);
     return;
   }
 
-  console.log(`[IN] ${prospect.agency_name} (${prospect.stage}): "${text.slice(0, 60)}"`);
+  const entry = { texts: [text], fromJid, timer: null };
+  entry.timer = setTimeout(() => flush(prospect.id), DEBOUNCE_MS);
+  pending.set(prospect.id, entry);
+}
 
-  processing.add(prospect.id);
+async function flush(prospectId) {
+  const entry = pending.get(prospectId);
+  if (!entry) return;
+  pending.delete(prospectId);
+
+  if (processing.has(prospectId)) return; // ya se está procesando (no debería pasar)
+  processing.add(prospectId);
+
   try {
-    await handleMessage(prospect, text, fromJid);
+    // Releer el prospecto por si cambió de estado mientras esperábamos el buffer
+    const prospect = getDb().prepare(`SELECT * FROM prospects WHERE id = ?`).get(prospectId);
+    if (!prospect || ['DISCARDED', 'HANDED_OFF'].includes(prospect.stage)) return;
+
+    const combinedText = entry.texts.join('\n');
+    const tag = entry.texts.length > 1 ? ` (${entry.texts.length} mensajes agrupados)` : '';
+    console.log(`[IN] ${prospect.agency_name} (${prospect.stage}): "${combinedText.slice(0, 60)}"${tag}`);
+
+    await handleMessage(prospect, combinedText, entry.fromJid);
   } catch (err) {
-    console.error(`[ERROR] ${prospect.agency_name} — ${err.message}`);
+    console.error(`[ERROR] prospecto #${prospectId} — ${err.message}`);
     console.error(err.stack?.split('\n')[1] || '');
   } finally {
-    processing.delete(prospect.id);
+    processing.delete(prospectId);
   }
 }

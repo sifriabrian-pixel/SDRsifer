@@ -6,6 +6,18 @@ import { handleMessage } from './stateMachine.js';
 
 const processing = new Set();
 
+// México: los números de celular llegan por webhook como 521XXXXXXXXXX (con un "1"
+// extra después del 52), pero nosotros los guardamos/mandamos como 52XXXXXXXXXX
+// (como vienen en el CSV, sin el 1). Sin esto, las respuestas de México no
+// encuentran al prospecto y caen como [UNKNOWN].
+export function normalizePhone(phone) {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 13 && digits.startsWith('521')) {
+    return '52' + digits.slice(3);
+  }
+  return digits;
+}
+
 // Buffer por prospecto: agrupa mensajes seguidos (ej: "Hola" + "En que te ayudo?")
 // y espera un período de silencio antes de contestar, para no responder a cada
 // mensaje suelto y para dar tiempo a que la otra persona termine de escribir.
@@ -15,7 +27,7 @@ const DEBOUNCE_MS = 30 * 1000;
 export async function handleIncomingKapso(fromPhone, text) {
   if (!fromPhone || !text) return;
 
-  const fromJid = `${fromPhone.replace(/\D/g, '')}@s.whatsapp.net`;
+  const fromJid = `${normalizePhone(fromPhone)}@s.whatsapp.net`;
   const prospect = getProspectByJid(fromJid);
 
   if (!prospect) {

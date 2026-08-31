@@ -3,7 +3,7 @@
 
 import express from 'express';
 import { normalizeWebhook, verifySignature } from '@kapso/whatsapp-cloud-api/server';
-import { handleIncomingKapso } from './kapsoRouter.js';
+import { handleIncomingKapso, normalizePhone } from './kapsoRouter.js';
 import { getDb } from './db.js';
 
 // Cuando Meta confirma que un mensaje no se pudo entregar (número no tiene WhatsApp,
@@ -12,7 +12,7 @@ import { getDb } from './db.js';
 function handleFailedStatus(status) {
   const phone = status.recipientId;
   if (!phone) return;
-  const jid = `${phone.replace(/\D/g, '')}@s.whatsapp.net`;
+  const jid = `${normalizePhone(phone)}@s.whatsapp.net`;
 
   const db = getDb();
   const prospect = db.prepare(
@@ -34,7 +34,7 @@ function handleFailedStatus(status) {
 function handleManualIntervention(message) {
   const phone = message.to;
   if (!phone) return;
-  const jid = `${phone.replace(/\D/g, '')}@s.whatsapp.net`;
+  const jid = `${normalizePhone(phone)}@s.whatsapp.net`;
 
   const db = getDb();
   const prospect = db.prepare(

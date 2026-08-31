@@ -136,7 +136,12 @@ export function updateEmailsByPhone(rows) {
   return updateMany(rows);
 }
 
-export function getPendingProspects(limit = 50, offset = 0) {
+export function getPendingProspects(limit = 50, offset = 0, country = null) {
+  if (country) {
+    return getDb().prepare(
+      `SELECT * FROM prospects WHERE stage = 'PENDING' AND country LIKE ? LIMIT ? OFFSET ?`
+    ).all(`%${country}%`, limit, offset);
+  }
   return getDb().prepare(`SELECT * FROM prospects WHERE stage = 'PENDING' LIMIT ? OFFSET ?`).all(limit, offset);
 }
 

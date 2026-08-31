@@ -56,8 +56,9 @@ async function main() {
   // ── Comando: lanzar lote (uso local, sin Railway corriendo en paralelo) ──
   if (args[0] === 'launch') {
     const limit = parseInt(args[1]) || 50;
+    const country = args[2] || null;
     await startTransport();
-    await runLaunchBatch(limit);
+    await runLaunchBatch(limit, country);
     console.log('Agente activo — escuchando respuestas entrantes.\n');
     startFollowupScheduler();
     startLaunchRequestWatcher();

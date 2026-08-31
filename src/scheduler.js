@@ -3,8 +3,9 @@
 let lastSentAt = 0;
 
 function randomDelay() {
-  // Entre 2 y 3 minutos (delay alto mientras el número se recupera de un ban)
-  return (120 + Math.floor(Math.random() * 60)) * 1000;
+  // ~1 minuto entre envíos (con API Oficial + template aprobado ya no hace falta
+  // el delay alto de 2-3min que usábamos con Baileys para evitar ban)
+  return (55 + Math.floor(Math.random() * 10)) * 1000;
 }
 
 function sleep(ms) {

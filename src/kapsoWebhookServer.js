@@ -1,12 +1,32 @@
-// Servidor HTTP que recibe los webhooks de Kapso/Meta con los mensajes entrantes.
-// IMPORTANTE: el formato exacto del payload lo vamos a confirmar con el primer mensaje
-// real que llegue (se loguea crudo abajo con [KAPSO-RAW]) — normalizeWebhook() asume
-// el formato estándar de Meta reenviado por Kapso; si Kapso usa su propio formato de
-// evento, hay que ajustar el parseo acá una vez que veamos un ejemplo real.
+// Servidor HTTP que recibe los webhooks de Kapso/Meta con los mensajes entrantes
+// y los eventos de estado de entrega (sent/delivered/failed).
 
 import express from 'express';
 import { normalizeWebhook, verifySignature } from '@kapso/whatsapp-cloud-api/server';
 import { handleIncomingKapso } from './kapsoRouter.js';
+import { getDb } from './db.js';
+
+// Cuando Meta confirma que un mensaje no se pudo entregar (número no tiene WhatsApp,
+// dejó de existir, etc.), lo marcamos en la DB para no dejar el prospecto colgado
+// esperando una respuesta que nunca va a llegar.
+function handleFailedStatus(status) {
+  const phone = status.recipientId;
+  if (!phone) return;
+  const jid = `${phone.replace(/\D/g, '')}@s.whatsapp.net`;
+
+  const db = getDb();
+  const prospect = db.prepare(
+    `SELECT * FROM prospects WHERE gatekeeper_jid = ? OR dm_jid = ? LIMIT 1`
+  ).get(jid, jid);
+  if (!prospect || ['DISCARDED', 'HANDED_OFF', 'NO_WHATSAPP'].includes(prospect.stage)) return;
+
+  const errorMsg = status.errors?.[0]?.title || status.errors?.[0]?.message || 'sin detalle';
+  db.prepare(`UPDATE prospects SET stage = 'NO_WHATSAPP', notes = notes || ? WHERE id = ?`).run(
+    `\n[${new Date().toISOString().slice(0, 16).replace('T', ' ')}] Entrega fallida: ${errorMsg}`,
+    prospect.id
+  );
+  console.log(`[FAILED] ${prospect.agency_name} (${phone}) — ${errorMsg} — marcado NO_WHATSAPP`);
+}
 
 export function startKapsoServer() {
   const app = express();
@@ -52,6 +72,9 @@ export function startKapsoServer() {
         if (message.type === 'text' && message.kapso?.direction === 'inbound') {
           await handleIncomingKapso(message.from, message.text?.body || '');
         }
+      }
+      for (const status of events.statuses || []) {
+        if (status.status === 'failed') handleFailedStatus(status);
       }
     } catch (err) {
       console.error('[KAPSO] Error normalizando webhook (revisar formato del payload arriba):', err.message);

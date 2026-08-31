@@ -65,6 +65,29 @@ async function main() {
     // No hay return — el proceso queda vivo escuchando respuestas
   }
 
+  // ── Comando: marcar prospectos como entrega fallida a mano (para corregir
+  //    los que fallaron antes de que el webhook de status empezara a procesarlos)
+  if (args[0] === 'mark-no-whatsapp') {
+    const phones = args.slice(1).map((p) => p.replace(/\D/g, ''));
+    if (phones.length === 0) {
+      console.error('Uso: node index.js mark-no-whatsapp <telefono1> [telefono2] ...');
+      process.exit(1);
+    }
+    const { getDb } = await import('./src/db.js');
+    const db = getDb();
+    for (const phone of phones) {
+      const jid = `${phone}@s.whatsapp.net`;
+      const prospect = db.prepare(`SELECT * FROM prospects WHERE gatekeeper_jid = ? OR dm_jid = ?`).get(jid, jid);
+      if (!prospect) {
+        console.log(`[SKIP] No se encontró prospecto para ${phone}`);
+        continue;
+      }
+      updateProspect(prospect.id, { stage: 'NO_WHATSAPP' });
+      console.log(`[FIXED] ${prospect.agency_name} (${phone}) → NO_WHATSAPP`);
+    }
+    process.exit(0);
+  }
+
   // ── Comando: prospecto de prueba manual — ignora a propósito el chequeo
   //    de "conversación existente" (es justamente para probar con un número
   //    que ya tiene chat abierto). Correr en el mismo proceso que ya está

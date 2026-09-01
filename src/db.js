@@ -138,9 +138,12 @@ export function updateEmailsByPhone(rows) {
 
 export function getPendingProspects(limit = 50, offset = 0, country = null) {
   if (country) {
+    const countries = Array.isArray(country) ? country : country.split(',').map((c) => c.trim());
+    const clause = countries.map(() => `country LIKE ?`).join(' OR ');
+    const params = countries.map((c) => `%${c}%`);
     return getDb().prepare(
-      `SELECT * FROM prospects WHERE stage = 'PENDING' AND country LIKE ? LIMIT ? OFFSET ?`
-    ).all(`%${country}%`, limit, offset);
+      `SELECT * FROM prospects WHERE stage = 'PENDING' AND (${clause}) LIMIT ? OFFSET ?`
+    ).all(...params, limit, offset);
   }
   return getDb().prepare(`SELECT * FROM prospects WHERE stage = 'PENDING' LIMIT ? OFFSET ?`).all(limit, offset);
 }

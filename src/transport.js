@@ -1,7 +1,7 @@
 // Selector de transporte: Baileys (default) o Kapso (API Oficial), según TRANSPORT en .env
 // El resto del código (router, stateMachine, launch) importa de acá en vez de whatsapp.js/kapso.js directo.
 
-import { FASE1_INICIAL } from '../data/sequences.js';
+import { FASE1_INICIAL, FASE3_APERTURA } from '../data/sequences.js';
 
 const isKapso = process.env.TRANSPORT === 'kapso';
 const impl = isKapso ? await import('./kapso.js') : await import('./whatsapp.js');
@@ -18,6 +18,20 @@ export async function sendFase1(jid) {
     return impl.sendTemplateMessage(jid, process.env.KAPSO_TEMPLATE_NAME || 'sdr_apertura_v1');
   }
   return impl.sendMessage(jid, FASE1_INICIAL);
+}
+
+// Apertura al DM cuando el portero da un número NUEVO (no es el mismo chat que
+// ya teníamos abierto) — también es fuera de ventana, necesita template propio.
+export async function sendFase3Apertura(jid, dmName, pais) {
+  if (isKapso) {
+    const templateName = process.env.KAPSO_DM_TEMPLATE_NAME;
+    if (!templateName) {
+      console.log('[KAPSO] Apertura a DM sin template aprobado configurado (KAPSO_DM_TEMPLATE_NAME) — no se envía.');
+      return null;
+    }
+    return impl.sendTemplateMessage(jid, templateName);
+  }
+  return impl.sendMessage(jid, FASE3_APERTURA(dmName, pais));
 }
 
 // El follow-up de 24hs también se manda fuera de la ventana de conversación,

@@ -1,5 +1,5 @@
 import { updateProspect } from './db.js';
-import { sendMessage } from './transport.js';
+import { sendMessage, sendFase3Apertura } from './transport.js';
 import { sendHandoff } from './notifier.js';
 import {
   classifyGatekeeperReply,
@@ -63,7 +63,7 @@ export async function handleMessage(prospect, incomingText, fromJid) {
           notes: appendNote(notes, `Portero dio contacto: ${dmPhone} (${dmName || 'sin nombre'})`),
         });
         await sendMessage(fromJid, FASE2_CIERRE_PORTERO);
-        await sendMessage(dmJid, FASE3_APERTURA(dmName, pais));
+        await sendFase3Apertura(dmJid, dmName, pais);
         await updateProspect(prospect.id, {
           stage: 'FASE3_BIFURCACION',
           last_message_at: new Date().toISOString(),
@@ -191,7 +191,7 @@ export async function handleMessage(prospect, incomingText, fromJid) {
           notes: appendNote(notes, `Portero dio contacto tras 3F: ${dmPhone}`),
         });
         await sendMessage(fromJid, FASE2_CIERRE_PORTERO);
-        await sendMessage(dmJid, FASE3_APERTURA(dmName, pais));
+        await sendFase3Apertura(dmJid, dmName, pais);
         await updateProspect(prospect.id, { stage: 'FASE3_BIFURCACION', last_message_at: new Date().toISOString() });
       } else {
         await updateProspect(prospect.id, {

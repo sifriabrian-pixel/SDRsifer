@@ -33,10 +33,21 @@ export async function sendTemplateMessage(jid, templateName, language = 'es_AR')
   });
 }
 
+// Argentina: los celulares necesitan un "9" extra después del 54 para que la
+// API de WhatsApp los reconozca (54 9 11 XXXXXXXX), pero los números tal cual
+// vienen de un CSV normal no lo traen (54 11 XXXXXXXX) — sin esto, Meta
+// devuelve "Message undeliverable" en el 100% de los envíos a Argentina.
+function normalizeOutboundPhone(digits) {
+  if (digits.startsWith('54') && !digits.startsWith('549') && digits.length === 12) {
+    return '549' + digits.slice(2);
+  }
+  return digits;
+}
+
 // La API oficial no tiene un chequeo de "¿este número tiene WhatsApp?" como onWhatsApp() de Baileys.
 // Se intenta enviar directo; si el número no es válido, Meta devuelve error al enviar (se captura en launch.js).
 export async function resolveJid(phone) {
-  const clean = phone.replace(/\D/g, '');
+  const clean = normalizeOutboundPhone(phone.replace(/\D/g, ''));
   return { jid: `${clean}@s.whatsapp.net`, lid: null };
 }
 

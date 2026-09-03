@@ -55,7 +55,7 @@ Devolvé SOLO un JSON con este formato exacto:
 }
 
 GAVE_CONTACT: dieron un número del director/responsable, o dicen que lo van a transferir/derivar internamente
-YO_AYUDO: dicen "yo puedo ayudarte", "cuéntame", "comentame", "podés hablar conmigo", "hablá conmigo", "contame más", "en qué te puedo ayudar" — cualquier variante donde el portero se ofrece como interlocutor
+YO_AYUDO: dicen "yo puedo ayudarte", "cuéntame", "comentame", "podés hablar conmigo", "hablá conmigo", "contame más", "en qué te puedo ayudar", "soy yo", "yo soy", "hablás conmigo", "es conmigo", "yo mismo" — cualquier variante donde el portero se ofrece como interlocutor O dice directamente que es la persona que se buscaba (el director/encargado)
 QUIERE_INFO: preguntan "¿de qué se trata?", "¿qué resultados?", "¿qué ofrecen?" — quieren más info antes de dar el contacto
 MANDAME_INFO: dicen "mándame la información y yo la paso", "mandame un mail", "enviame los detalles", "dejo tu mensaje", "le paso tu mensaje", "se lo hago llegar", "te lo comunico", "le aviso", "pero dejo el mensaje", "lo comunico", "le digo", "se lo digo" — cualquier variante donde ofrecen transmitir el mensaje al director
 NO_CONTACTO: dicen que no tienen el dato, no pueden darlo, no saben, o no es su responsabilidad

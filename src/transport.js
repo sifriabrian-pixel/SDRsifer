@@ -34,6 +34,21 @@ export async function sendFase3Apertura(jid, dmName, pais) {
   return impl.sendMessage(jid, FASE3_APERTURA(dmName, pais));
 }
 
+// Aviso a Brian de que hay un lead interesado. Se intenta primero como texto libre
+// (funciona si Brian le escribió al número hace menos de 24hs); si eso falla, hay
+// que usar un template aprobado — igual que le pasa a cualquier mensaje frío.
+export async function sendHandoffNotification(jid) {
+  if (isKapso) {
+    const templateName = process.env.KAPSO_HANDOFF_TEMPLATE_NAME;
+    if (!templateName) {
+      console.log('[KAPSO] Aviso de handoff sin template aprobado configurado (KAPSO_HANDOFF_TEMPLATE_NAME) — no se pudo avisar a Brian.');
+      return null;
+    }
+    return impl.sendTemplateMessage(jid, templateName);
+  }
+  return impl.sendMessage(jid, 'Che, tenés un lead nuevo esperando respuesta — revisá WhatsApp 👀');
+}
+
 // El follow-up de 24hs también se manda fuera de la ventana de conversación,
 // así que con la API Oficial también necesita template propio (todavía no está cargado en Kapso).
 export async function sendFollowup(jid, freeText) {

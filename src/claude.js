@@ -49,7 +49,7 @@ export async function classifyGatekeeperReply(message) {
 
 Devolvé SOLO un JSON con este formato exacto:
 {
-  "action": "GAVE_CONTACT" | "YO_AYUDO" | "QUIERE_INFO" | "MANDAME_INFO" | "NO_CONTACTO" | "PIDE_WEB" | "YA_TIENEN" | "REJECTED" | "UNKNOWN",
+  "action": "GAVE_CONTACT" | "YO_AYUDO" | "QUIERE_INFO" | "MANDAME_INFO" | "YA_LO_PASE" | "NO_CONTACTO" | "PIDE_WEB" | "YA_TIENEN" | "REJECTED" | "UNKNOWN",
   "dm_phone": "<número si lo dieron, o null>",
   "dm_name": "<nombre si lo mencionaron, o null>"
 }
@@ -57,7 +57,8 @@ Devolvé SOLO un JSON con este formato exacto:
 GAVE_CONTACT: dieron un número del director/responsable, o dicen que lo van a transferir/derivar internamente
 YO_AYUDO: dicen "yo puedo ayudarte", "cuéntame", "comentame", "podés hablar conmigo", "hablá conmigo", "contame más", "en qué te puedo ayudar", "soy yo", "yo soy", "hablás conmigo", "es conmigo", "yo mismo" — cualquier variante donde el portero se ofrece como interlocutor O dice directamente que es la persona que se buscaba (el director/encargado)
 QUIERE_INFO: preguntan "¿de qué se trata?", "¿qué resultados?", "¿qué ofrecen?" — quieren más info antes de dar el contacto
-MANDAME_INFO: dicen "mándame la información y yo la paso", "mandame un mail", "enviame los detalles", "dejo tu mensaje", "le paso tu mensaje", "se lo hago llegar", "te lo comunico", "le aviso", "pero dejo el mensaje", "lo comunico", "le digo", "se lo digo" — cualquier variante donde ofrecen transmitir el mensaje al director
+MANDAME_INFO: ofrecen A FUTURO transmitir el mensaje — "mándame la información y yo la paso", "mandame un mail", "enviame los detalles", "dejo tu mensaje", "le paso tu mensaje", "se lo hago llegar", "te lo comunico", "le aviso", "lo comunico", "le digo", "se lo digo" — el verbo está en futuro/presente, todavía no lo hicieron
+YA_LO_PASE: confirman que YA transmitieron el mensaje — "ya le pasé su mensaje", "ya se lo comenté", "ya le avisé", "listo, ya está informado" — el verbo está en pasado, la acción ya se hizo. NO es lo mismo que MANDAME_INFO: acá no hay que volver a mandar la info, solo agradecer y esperar
 NO_CONTACTO: dicen que no tienen el dato, no pueden darlo, no saben, o no es su responsabilidad
 PIDE_WEB: preguntan por la página web, redes sociales, Instagram, LinkedIn u otras formas de ver más información
 YA_TIENEN: dicen "ya tenemos eso", "ya usamos algo similar", "no lo necesitamos", "no nos interesa" — pero sin ser un rechazo rotundo

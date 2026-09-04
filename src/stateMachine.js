@@ -118,6 +118,17 @@ export async function handleMessage(prospect, incomingText, fromJid) {
       return;
     }
 
+    if (result.action === 'YA_LO_PASE') {
+      // Ya confirmó que transmitió el mensaje — no repetir el bloque de info, solo agradecer
+      await sendMessage(fromJid, FASE2_OBJECIONES.ya_lo_pase());
+      await updateProspect(prospect.id, {
+        stage: 'FASE2_PORTERO',
+        last_message_at: new Date().toISOString(),
+        last_reply_at: new Date().toISOString(),
+      });
+      return;
+    }
+
     if (result.action === 'NO_CONTACTO') {
       await sendMessage(fromJid, FASE2_OBJECIONES.no_contacto());
       await updateProspect(prospect.id, {

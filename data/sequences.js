@@ -34,6 +34,10 @@ export const FASE2_OBJECIONES = {
   mandame_info: (pais) =>
     `¡Claro, con gusto! 😊\n\nSomos Sifer, trabajamos con inmobiliarias en ${pais} para que su equipo de asesores siempre tenga prospectos activos para contactar. Lo hacemos combinando captación con Meta Ads, calificación automática con IA y un sistema de seguimiento comercial.\n\nLo están usando +50 inmobiliarias, y lo que más valoran es que dejaron de perder leads por falta de seguimiento.\n\nSi le podés comentar esto al director o encargado comercial, estaría buenísimo. Y si me podés pasar su contacto directo, mejor todavía así le escribo yo y no le generamos trabajo extra a vos. ¿Cómo lo ves? 🙏`,
 
+  // 3C-bis: confirman que ya le pasaron el mensaje al director (no repetir la info)
+  ya_lo_pase: () =>
+    `Muchas gracias! 🙏 Quedo atento a lo que me pueda contar.`,
+
   // 3D: no tienen el contacto o no pueden darlo
   no_contacto: () =>
     `Entiendo perfectamente, no hay problema. ¿Sabrías al menos el nombre del director o responsable? Con eso ya me ayudás mucho.`,

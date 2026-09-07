@@ -91,7 +91,7 @@ export function startKapsoServer() {
       const events = normalizeWebhook(payload);
       for (const message of events.messages || []) {
         if (message.type === 'text' && message.kapso?.direction === 'inbound') {
-          await handleIncomingKapso(message.from, message.text?.body || '');
+          await handleIncomingKapso(message.from, message.text?.body || '', message.id);
         }
         if (message.kapso?.direction === 'outbound' && message.kapso?.source === 'smb_message_echo') {
           handleManualIntervention(message);

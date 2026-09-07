@@ -21,7 +21,7 @@ function handleFailedStatus(status) {
   if (!prospect || ['DISCARDED', 'HANDED_OFF', 'NO_WHATSAPP'].includes(prospect.stage)) return;
 
   const errorMsg = status.errors?.[0]?.title || status.errors?.[0]?.message || 'sin detalle';
-  db.prepare(`UPDATE prospects SET stage = 'NO_WHATSAPP', notes = notes || ? WHERE id = ?`).run(
+  db.prepare(`UPDATE prospects SET stage = 'NO_WHATSAPP', notes = COALESCE(notes, '') || ? WHERE id = ?`).run(
     `\n[${new Date().toISOString().slice(0, 16).replace('T', ' ')}] Entrega fallida: ${errorMsg}`,
     prospect.id
   );
@@ -42,7 +42,7 @@ function handleManualIntervention(message) {
   ).get(jid, jid);
   if (!prospect || ['DISCARDED', 'HANDED_OFF'].includes(prospect.stage)) return;
 
-  db.prepare(`UPDATE prospects SET stage = 'HANDED_OFF', notes = notes || ? WHERE id = ?`).run(
+  db.prepare(`UPDATE prospects SET stage = 'HANDED_OFF', notes = COALESCE(notes, '') || ? WHERE id = ?`).run(
     `\n[${new Date().toISOString().slice(0, 16).replace('T', ' ')}] Brian intervino manualmente — agente pausado`,
     prospect.id
   );

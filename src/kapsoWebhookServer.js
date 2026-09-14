@@ -5,6 +5,30 @@ import express from 'express';
 import { normalizeWebhook, verifySignature } from '@kapso/whatsapp-cloud-api/server';
 import { handleIncomingKapso, normalizePhone } from './kapsoRouter.js';
 import { getDb } from './db.js';
+import { getStats, listarPorCategoria } from './stats.js';
+import { renderStatsPage, renderDetallePage } from './statsView.js';
+
+// Guarda el último estado de entrega (sent/delivered/read/failed) por prospecto,
+// para el dashboard (/stats) — cuántos leyeron, cuántos solo recibieron, etc.
+function handleStatusUpdate(status) {
+  const phone = status.recipientId;
+  if (!phone || !status.status) return;
+  const jid = `${normalizePhone(phone)}@s.whatsapp.net`;
+
+  const db = getDb();
+  const prospect = db.prepare(
+    `SELECT * FROM prospects WHERE gatekeeper_jid = ? OR dm_jid = ? LIMIT 1`
+  ).get(jid, jid);
+  if (!prospect) return;
+
+  const now = new Date().toISOString();
+  const fields = { last_status: status.status, last_status_at: now };
+  if (status.status === 'delivered' && !prospect.delivered_at) fields.delivered_at = now;
+  if (status.status === 'read' && !prospect.read_at) fields.read_at = now;
+
+  const set = Object.keys(fields).map((k) => `${k} = ?`).join(', ');
+  db.prepare(`UPDATE prospects SET ${set} WHERE id = ?`).run(...Object.values(fields), prospect.id);
+}
 
 // Cuando Meta confirma que un mensaje no se pudo entregar (número no tiene WhatsApp,
 // dejó de existir, etc.), lo marcamos en la DB para no dejar el prospecto colgado
@@ -49,10 +73,42 @@ function handleManualIntervention(message) {
   console.log(`[BRIAN] ${prospect.agency_name} — intervención manual detectada, agente pausado (HANDED_OFF)`);
 }
 
+// Protege /stats con usuario/contraseña simple (Basic Auth), mismo patrón que
+// los otros agentes (Diamond, Impacta). Sin DASHBOARD_PASSWORD configurada,
+// no se protege — no recomendado en producción.
+function checkAuth(req, res) {
+  const password = process.env.DASHBOARD_PASSWORD;
+  if (!password) return true;
+
+  const header = req.headers.authorization || '';
+  const [, encoded] = header.split(' ');
+  const decoded = encoded ? Buffer.from(encoded, 'base64').toString('utf8') : '';
+  const [, pass] = decoded.split(':');
+  if (pass === password) return true;
+
+  res.set('WWW-Authenticate', 'Basic realm="Sifer CRM"');
+  res.status(401).send('Acceso restringido');
+  return false;
+}
+
 export function startKapsoServer() {
   const app = express();
   // Railway asigna el puerto en process.env.PORT — WEBHOOK_PORT es solo para correrlo local
   const port = process.env.PORT || process.env.WEBHOOK_PORT || 3000;
+
+  app.get('/stats', (req, res) => {
+    if (!checkAuth(req, res)) return;
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.send(renderStatsPage(getStats()));
+  });
+
+  app.get('/stats/detalle', (req, res) => {
+    if (!checkAuth(req, res)) return;
+    const { tipo, pais } = req.query;
+    const rows = listarPorCategoria(tipo, pais || null);
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.send(renderDetallePage(tipo, pais || null, rows));
+  });
 
   // Handshake de verificación (solo aplica si se suscribe directo a Meta)
   app.get('/webhook', (req, res) => {
@@ -98,6 +154,7 @@ export function startKapsoServer() {
         }
       }
       for (const status of events.statuses || []) {
+        handleStatusUpdate(status);
         if (status.status === 'failed') handleFailedStatus(status);
       }
     } catch (err) {

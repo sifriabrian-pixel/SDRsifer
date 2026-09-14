@@ -56,6 +56,10 @@ export function initDb() {
     email_subject: `ALTER TABLE prospects ADD COLUMN email_subject TEXT`,
     email_first_sent_at: `ALTER TABLE prospects ADD COLUMN email_first_sent_at TEXT`,
     franquicia: `ALTER TABLE prospects ADD COLUMN franquicia TEXT`,
+    last_status: `ALTER TABLE prospects ADD COLUMN last_status TEXT`,
+    last_status_at: `ALTER TABLE prospects ADD COLUMN last_status_at TEXT`,
+    delivered_at: `ALTER TABLE prospects ADD COLUMN delivered_at TEXT`,
+    read_at: `ALTER TABLE prospects ADD COLUMN read_at TEXT`,
   };
   for (const [col, sql] of Object.entries(migrations)) {
     if (!existingCols.includes(col)) db.exec(sql);

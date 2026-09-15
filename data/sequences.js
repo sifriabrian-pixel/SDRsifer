@@ -16,6 +16,12 @@ export const FASE2_PORTERO_PRINCIPAL = (pais) => {
   return `Un gusto saludarte, Mi nombre es Brian, soy del equipo de Sifer. Nos especializamos en ayudar a inmobiliarias de la región a mejorar la captación, atención y el seguimiento de sus potenciales clientes de manera totalmente automática.\n\nQuería comunicarme con el director o responsable comercial de la oficina para contarle brevemente sobre los resultados que estamos viendo con otras inmobiliarias en ${pais}.\n\n¿Me podrían ayudar a contactarlo?`;
 };
 
+// Variante para prospectos con franquicia (RE/MAX, Century 21) — mismo mensaje,
+// pero mencionando "oficinas de Remax y C21" en vez de "inmobiliarias" en general.
+export const FASE2_PORTERO_PRINCIPAL_FRANQUICIA = (pais) => {
+  return `Un gusto saludarte, Mi nombre es Brian, soy del equipo de Sifer. Nos especializamos en ayudar a oficinas de Remax y C21 de la región a mejorar la captación, atención y el seguimiento de sus potenciales clientes de manera totalmente automática.\n\nQuería comunicarme con el director o responsable comercial de la oficina para contarle brevemente sobre los resultados que estamos viendo con otras inmobiliarias en ${pais}.\n\n¿Me podrían ayudar a contactarlo?`;
+};
+
 // ETAPA 1 — Bifurcaciones del portero
 export const FASE2_OBJECIONES = {
   // 3A: preguntan "¿de qué se trata?" o "¿qué resultados?"

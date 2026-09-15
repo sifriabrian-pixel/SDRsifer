@@ -9,6 +9,7 @@ import {
 } from './claude.js';
 import {
   FASE2_PORTERO_PRINCIPAL,
+  FASE2_PORTERO_PRINCIPAL_FRANQUICIA,
   FASE2_OBJECIONES,
   FASE2_CIERRE_PORTERO,
   FASE3_APERTURA,
@@ -29,8 +30,9 @@ function typingDelay() {
 
 export async function handleMessage(prospect, incomingText, fromJid) {
   await typingDelay();
-  const { stage, country, dm_name, notes } = prospect;
+  const { stage, country, dm_name, notes, franquicia } = prospect;
   const pais = country || '[país]';
+  const mensaje2 = franquicia ? FASE2_PORTERO_PRINCIPAL_FRANQUICIA : FASE2_PORTERO_PRINCIPAL;
 
   // ─── FASE 1: respuesta al saludo inicial — siempre enviar Mensaje 2 ─────────
   if (stage === 'FASE1_SENT') {
@@ -39,7 +41,7 @@ export async function handleMessage(prospect, incomingText, fromJid) {
       gatekeeper_jid: fromJid,
       last_reply_at: new Date().toISOString(),
     });
-    await sendMessage(fromJid, FASE2_PORTERO_PRINCIPAL(pais));
+    await sendMessage(fromJid, mensaje2(pais));
     await updateProspect(prospect.id, { last_message_at: new Date().toISOString() });
     return;
   }

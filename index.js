@@ -57,8 +57,9 @@ async function main() {
   if (args[0] === 'launch') {
     const limit = parseInt(args[1]) || 50;
     const country = args[2] || null;
+    const franquicia = args[3] || null;
     await startTransport();
-    await runLaunchBatch(limit, country);
+    await runLaunchBatch(limit, country, franquicia);
     console.log('Agente activo — escuchando respuestas entrantes.\n');
     startFollowupScheduler();
     startLaunchRequestWatcher();

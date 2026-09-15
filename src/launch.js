@@ -1,17 +1,18 @@
 import { getPendingProspects, updateProspect } from './db.js';
 import { resolveJid, chatExists, sendFase1 } from './transport.js';
 
-export async function runLaunchBatch(limit, country = null) {
-  console.log(`\n🚀 Enviando mensajes a ${limit} prospectos nuevos${country ? ` (${country})` : ''}...\n`);
+export async function runLaunchBatch(limit, country = null, franquicia = null) {
+  const etiqueta = [country, franquicia].filter(Boolean).join(' — ');
+  console.log(`\n🚀 Enviando mensajes a ${limit} prospectos nuevos${etiqueta ? ` (${etiqueta})` : ''}...\n`);
 
   let enviados = 0;
   let saltados = 0;
   let noWhatsapp = 0;
 
   while (enviados < limit) {
-    const batch = getPendingProspects(20, 0, country);
+    const batch = getPendingProspects(20, 0, country, franquicia);
     if (batch.length === 0) {
-      console.log(`No hay más prospectos en estado PENDING${country ? ` para ${country}` : ''}.`);
+      console.log(`No hay más prospectos en estado PENDING${etiqueta ? ` para ${etiqueta}` : ''}.`);
       break;
     }
 

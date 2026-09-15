@@ -140,16 +140,26 @@ export function updateEmailsByPhone(rows) {
   return updateMany(rows);
 }
 
-export function getPendingProspects(limit = 50, offset = 0, country = null) {
+export function getPendingProspects(limit = 50, offset = 0, country = null, franquicia = null) {
+  const conditions = [`stage = 'PENDING'`];
+  const params = [];
+
   if (country) {
     const countries = Array.isArray(country) ? country : country.split(',').map((c) => c.trim());
-    const clause = countries.map(() => `country LIKE ?`).join(' OR ');
-    const params = countries.map((c) => `%${c}%`);
-    return getDb().prepare(
-      `SELECT * FROM prospects WHERE stage = 'PENDING' AND (${clause}) LIMIT ? OFFSET ?`
-    ).all(...params, limit, offset);
+    conditions.push(`(${countries.map(() => `country LIKE ?`).join(' OR ')})`);
+    params.push(...countries.map((c) => `%${c}%`));
   }
-  return getDb().prepare(`SELECT * FROM prospects WHERE stage = 'PENDING' LIMIT ? OFFSET ?`).all(limit, offset);
+
+  if (franquicia === '*') {
+    conditions.push(`franquicia IS NOT NULL`);
+  } else if (franquicia) {
+    conditions.push(`franquicia = ?`);
+    params.push(franquicia);
+  }
+
+  return getDb().prepare(
+    `SELECT * FROM prospects WHERE ${conditions.join(' AND ')} LIMIT ? OFFSET ?`
+  ).all(...params, limit, offset);
 }
 
 // Prospectos con email conocido y pipeline de email aún no iniciado

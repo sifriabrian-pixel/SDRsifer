@@ -3,8 +3,6 @@
 
 import { getDb } from './db.js';
 
-const PAISES = ['Argentina', 'Paraguay', 'Ecuador', 'Mexico', 'México', 'Peru', 'Perú'];
-
 function normalizarPais(pais) {
   const p = (pais || '').toLowerCase();
   if (p.includes('argentin')) return 'Argentina';
@@ -15,24 +13,45 @@ function normalizarPais(pais) {
   return pais || 'Sin país';
 }
 
+// EMAIL_ONLY es un pipeline aparte (leads que solo se trabajan por mail, nunca
+// se les mandó WhatsApp) — se excluye por completo del dashboard de WhatsApp.
+const NUNCA_ENVIADO = ['PENDING', 'EMAIL_ONLY'];
+
+// Etapas que solo existen porque YA hubo una respuesta real del gatekeeper o
+// del DM (handleMessage solo corre cuando llega un mensaje entrante — nunca
+// se entra a estas etapas "en frío"). FASE1_SENT, FASE2_FOLLOWUP_SENT y
+// NO_REPLY quedan afuera a propósito: significan "se mandó, no contestaron".
+const CONTESTARON = [
+  'FASE2_PORTERO',
+  'FASE2_YA_TIENEN',
+  'FASE2_CALIFICANDO',
+  'FASE2_OBJECION',
+  'FASE3_APERTURA',
+  'FASE3_BIFURCACION',
+  'FASE3_BIFURCACION_B',
+  'FASE3_OBJECION',
+  'DISCARDED',
+  'HANDED_OFF',
+];
+
 // Métricas base de un conjunto de filas ya filtradas por país (o todas)
 function calcularMetricas(rows) {
   const total = rows.length;
-  const enviados = rows.filter((r) => r.stage !== 'PENDING').length;
   const pendientes = rows.filter((r) => r.stage === 'PENDING').length;
+  const emailOnly = rows.filter((r) => r.stage === 'EMAIL_ONLY').length;
+  const enviados = rows.filter((r) => !NUNCA_ENVIADO.includes(r.stage) && r.stage !== 'SKIPPED').length;
   const sinWhatsapp = rows.filter((r) => r.stage === 'NO_WHATSAPP').length;
   const saltados = rows.filter((r) => r.stage === 'SKIPPED').length;
+  const sinRespuesta = rows.filter((r) => ['FASE1_SENT', 'FASE2_FOLLOWUP_SENT', 'NO_REPLY'].includes(r.stage)).length;
   const entregados = rows.filter((r) => r.delivered_at || r.read_at).length;
   const leidos = rows.filter((r) => r.read_at).length;
-  const contestaron = rows.filter(
-    (r) => !['PENDING', 'FASE1_SENT', 'NO_WHATSAPP', 'SKIPPED'].includes(r.stage)
-  ).length;
+  const contestaron = rows.filter((r) => CONTESTARON.includes(r.stage)).length;
   const eranDm = rows.filter((r) => r.dm_jid && r.dm_jid === r.gatekeeper_jid).length;
   const derivaronDm = rows.filter((r) => r.dm_jid && r.dm_jid !== r.gatekeeper_jid).length;
   const handoff = rows.filter((r) => r.stage === 'HANDED_OFF').length;
   const descartados = rows.filter((r) => r.stage === 'DISCARDED').length;
 
-  const base = enviados - sinWhatsapp - saltados; // a los que realmente les llegó el intento
+  const base = enviados - sinWhatsapp; // a los que realmente les llegó el intento (excluye saltados y sin whatsapp)
   const tasaRespuesta = base > 0 ? Math.round((contestaron / base) * 100) : null;
   const tasaHandoff = enviados > 0 ? Math.round((handoff / enviados) * 100) : null;
   const tasaLectura = entregados > 0 ? Math.round((leidos / entregados) * 100) : null;
@@ -41,8 +60,10 @@ function calcularMetricas(rows) {
     total,
     enviados,
     pendientes,
+    emailOnly,
     sinWhatsapp,
     saltados,
+    sinRespuesta,
     entregados,
     leidos,
     contestaron,
@@ -79,12 +100,13 @@ export function getStats() {
 // Listado detalle para una categoría, con filtro opcional de país — para el
 // drill-down del dashboard (ver quiénes componen cada número).
 const FILTROS = {
-  enviados: (r) => r.stage !== 'PENDING',
+  enviados: (r) => !NUNCA_ENVIADO.includes(r.stage) && r.stage !== 'SKIPPED',
   sin_whatsapp: (r) => r.stage === 'NO_WHATSAPP',
   saltados: (r) => r.stage === 'SKIPPED',
+  sin_respuesta: (r) => ['FASE1_SENT', 'FASE2_FOLLOWUP_SENT', 'NO_REPLY'].includes(r.stage),
   entregados: (r) => r.delivered_at || r.read_at,
   leidos: (r) => r.read_at,
-  contestaron: (r) => !['PENDING', 'FASE1_SENT', 'NO_WHATSAPP', 'SKIPPED'].includes(r.stage),
+  contestaron: (r) => CONTESTARON.includes(r.stage),
   eran_dm: (r) => r.dm_jid && r.dm_jid === r.gatekeeper_jid,
   derivaron_dm: (r) => r.dm_jid && r.dm_jid !== r.gatekeeper_jid,
   handoff: (r) => r.stage === 'HANDED_OFF',

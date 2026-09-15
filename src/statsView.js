@@ -16,6 +16,7 @@ const CATEGORIA_LABEL = {
   enviados: 'Enviados',
   sin_whatsapp: 'Sin WhatsApp',
   saltados: 'Saltados',
+  sin_respuesta: 'Sin respuesta',
   entregados: 'Entregados',
   leidos: 'Leídos',
   contestaron: 'Contestaron',
@@ -78,6 +79,7 @@ export function renderStatsPage(stats) {
         <td>${link('entregados', p.pais, p.entregados)}</td>
         <td>${link('leidos', p.pais, p.leidos)}</td>
         <td>${link('contestaron', p.pais, p.contestaron)}</td>
+        <td>${link('sin_respuesta', p.pais, p.sinRespuesta)}</td>
         <td>${link('eran_dm', p.pais, p.eranDm)}</td>
         <td>${link('derivaron_dm', p.pais, p.derivaronDm)}</td>
         <td>${link('handoff', p.pais, p.handoff)}</td>
@@ -96,6 +98,7 @@ export function renderStatsPage(stats) {
       ${card(t.entregados, 'Entregados')}
       ${card(t.leidos, 'Leídos', 'green')}
       ${card(t.contestaron, 'Contestaron')}
+      ${card(t.sinRespuesta, 'Sin respuesta', 'yellow')}
       ${card(t.tasaRespuesta != null ? t.tasaRespuesta + '%' : '—', 'Tasa de respuesta')}
       ${card(t.handoff, 'Derivados a Brian (handoff)', 'green')}
       ${card(t.tasaHandoff != null ? t.tasaHandoff + '%' : '—', 'Tasa de conversión a handoff')}
@@ -108,7 +111,7 @@ export function renderStatsPage(stats) {
         <thead>
           <tr>
             <th>País</th><th>Enviados</th><th>Entregados</th><th>Leídos</th>
-            <th>Contestaron</th><th>Eran DM</th><th>Derivaron DM</th>
+            <th>Contestaron</th><th>Sin respuesta</th><th>Eran DM</th><th>Derivaron DM</th>
             <th>Handoff</th><th>Sin WhatsApp</th><th>Pendientes</th>
           </tr>
         </thead>

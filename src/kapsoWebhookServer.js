@@ -8,6 +8,27 @@ import { getDb } from './db.js';
 import { getStats, listarPorCategoria } from './stats.js';
 import { renderStatsPage, renderDetallePage } from './statsView.js';
 
+// Cuando el portero comparte una tarjeta de contacto (vCard) en vez de escribir
+// el número, Meta la manda como type "contacts", no "text" — el body de texto
+// que acompaña queda solo, sin el teléfono. Sin esto, el clasificador nunca ve
+// el número real y confunde "te paso el contacto" con "yo se lo derivo
+// internamente", mandando el pitch en el mismo chat del portero.
+function formatContactCard(contacts) {
+  if (!Array.isArray(contacts) || contacts.length === 0) return null;
+  return contacts
+    .map((c) => {
+      const nombre = c?.name?.formatted_name || c?.name?.first_name || 'Contacto';
+      const telefonos = (c?.phones || [])
+        .map((p) => p?.wa_id || p?.phone)
+        .filter(Boolean)
+        .join(', ');
+      return telefonos
+        ? `[Compartió el contacto] ${nombre} — Teléfono: ${telefonos}`
+        : `[Compartió el contacto] ${nombre} (sin teléfono legible)`;
+    })
+    .join('\n');
+}
+
 // Guarda el último estado de entrega (sent/delivered/read/failed) por prospecto,
 // para el dashboard (/stats) — cuántos leyeron, cuántos solo recibieron, etc.
 function handleStatusUpdate(status) {
@@ -148,6 +169,10 @@ export function startKapsoServer() {
       for (const message of events.messages || []) {
         if (message.type === 'text' && message.kapso?.direction === 'inbound') {
           await handleIncomingKapso(message.from, message.text?.body || '', message.id);
+        }
+        if (message.type === 'contacts' && message.kapso?.direction === 'inbound') {
+          const texto = formatContactCard(message.contacts);
+          if (texto) await handleIncomingKapso(message.from, texto, message.id);
         }
         if (message.kapso?.direction === 'outbound' && message.kapso?.source === 'smb_message_echo') {
           handleManualIntervention(message);

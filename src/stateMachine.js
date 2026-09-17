@@ -100,6 +100,19 @@ export async function handleMessage(prospect, incomingText, fromJid) {
       return;
     }
 
+    if (result.action === 'VA_A_CONSULTAR') {
+      // Todavía no derivó nada — va a preguntarle al director. Agradecer y esperar,
+      // sin mandar el pitch (eso recién cuando confirme GAVE_CONTACT).
+      await sendMessage(fromJid, FASE2_OBJECIONES.va_a_consultar());
+      await updateProspect(prospect.id, {
+        stage: 'FASE2_PORTERO',
+        last_message_at: new Date().toISOString(),
+        last_reply_at: new Date().toISOString(),
+        notes: appendNote(notes, `Portero va a consultarle al director — esperando confirmación`),
+      });
+      return;
+    }
+
     if (result.action === 'QUIERE_INFO') {
       await sendMessage(fromJid, FASE2_OBJECIONES.que_se_trata(pais));
       await updateProspect(prospect.id, {
@@ -217,6 +230,17 @@ export async function handleMessage(prospect, incomingText, fromJid) {
         await sendMessage(fromJid, FASE3_APERTURA(dmName, pais));
         await updateProspect(prospect.id, { stage: 'FASE3_BIFURCACION', last_message_at: new Date().toISOString() });
       }
+      return;
+    }
+
+    if (result.action === 'VA_A_CONSULTAR') {
+      await sendMessage(fromJid, FASE2_OBJECIONES.va_a_consultar());
+      await updateProspect(prospect.id, {
+        stage: 'FASE2_YA_TIENEN',
+        last_message_at: new Date().toISOString(),
+        last_reply_at: new Date().toISOString(),
+        notes: appendNote(notes, `Portero va a consultarle al director tras 3F — esperando confirmación`),
+      });
       return;
     }
 

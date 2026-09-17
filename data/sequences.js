@@ -44,6 +44,10 @@ export const FASE2_OBJECIONES = {
   ya_lo_pase: () =>
     `Muchas gracias! 🙏 Quedo atento a lo que me pueda contar.`,
 
+  // 3C-ter: van a CONSULTARLE al director si pueden dar el contacto (todavía no decidieron nada)
+  va_a_consultar: () =>
+    `Perfecto, muchas gracias! 🙏 Quedo atento a lo que te diga.`,
+
   // 3D: no tienen el contacto o no pueden darlo
   no_contacto: () =>
     `Entiendo perfectamente, no hay problema. ¿Sabrías al menos el nombre del director o responsable? Con eso ya me ayudás mucho.`,

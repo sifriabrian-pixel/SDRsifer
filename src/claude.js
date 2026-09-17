@@ -49,12 +49,13 @@ export async function classifyGatekeeperReply(message) {
 
 Devolvé SOLO un JSON con este formato exacto:
 {
-  "action": "GAVE_CONTACT" | "YO_AYUDO" | "QUIERE_INFO" | "MANDAME_INFO" | "YA_LO_PASE" | "NO_CONTACTO" | "PIDE_WEB" | "YA_TIENEN" | "REJECTED" | "UNKNOWN",
+  "action": "GAVE_CONTACT" | "VA_A_CONSULTAR" | "YO_AYUDO" | "QUIERE_INFO" | "MANDAME_INFO" | "YA_LO_PASE" | "NO_CONTACTO" | "PIDE_WEB" | "YA_TIENEN" | "REJECTED" | "UNKNOWN",
   "dm_phone": "<número si lo dieron, o null>",
   "dm_name": "<nombre si lo mencionaron, o null>"
 }
 
-GAVE_CONTACT: dieron un número del director/responsable, o dicen que lo van a transferir/derivar internamente
+GAVE_CONTACT: YA dieron un número del director/responsable, o confirman que YA lo van a poner en contacto/derivar (acción decidida, no condicional)
+VA_A_CONSULTAR: dicen que van a PREGUNTARLE/CONSULTARLE al director si pueden dar su número o derivar la conversación — "le pregunto si te puedo dar su número", "le consulto y te aviso", "voy a ver si puedo pasarte el contacto", "deja le pregunto" — todavía NO decidieron nada, depende de una respuesta de un tercero que no llegó. Distinto de GAVE_CONTACT: acá no hay ninguna derivación real todavía, solo la intención de consultar
 YO_AYUDO: dicen "yo puedo ayudarte", "cuéntame", "comentame", "podés hablar conmigo", "hablá conmigo", "contame más", "en qué te puedo ayudar", "soy yo", "yo soy", "hablás conmigo", "es conmigo", "yo mismo" — cualquier variante donde el portero se ofrece como interlocutor O dice directamente que es la persona que se buscaba (el director/encargado)
 QUIERE_INFO: preguntan "¿de qué se trata?", "¿qué resultados?", "¿qué ofrecen?" — quieren más info antes de dar el contacto
 MANDAME_INFO: ofrecen A FUTURO transmitir el mensaje — "mándame la información y yo la paso", "mandame un mail", "enviame los detalles", "dejo tu mensaje", "le paso tu mensaje", "se lo hago llegar", "te lo comunico", "le aviso", "lo comunico", "le digo", "se lo digo" — el verbo está en futuro/presente, todavía no lo hicieron

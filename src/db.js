@@ -162,11 +162,15 @@ export function getPendingProspects(limit = 50, offset = 0, country = null, fran
   ).all(...params, limit, offset);
 }
 
-// Prospectos con email conocido y pipeline de email aún no iniciado
+// Prospectos con email conocido y pipeline de email aún no iniciado — SOLO los
+// que no tienen WhatsApp (no se cargó teléfono, o WhatsApp ya confirmó que no
+// se pudo entregar). Si tiene teléfono y todavía no se intentó (PENDING) o está
+// en curso, el email espera hasta que WhatsApp falle o se confirme que no hay teléfono.
 export function getPendingEmailProspects(limit = 50) {
   return getDb().prepare(`
     SELECT * FROM prospects
     WHERE email_stage = 'PENDING' AND gatekeeper_email IS NOT NULL AND gatekeeper_email != ''
+      AND (stage = 'NO_WHATSAPP' OR gatekeeper_phone IS NULL OR gatekeeper_phone = '' OR gatekeeper_phone = 'sin-telefono')
     LIMIT ?
   `).all(limit);
 }

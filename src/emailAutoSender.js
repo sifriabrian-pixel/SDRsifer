@@ -4,7 +4,11 @@ import { isWithinSendWindow, windowKey, getSupportedCountries, countryMatches } 
 import { getPendingEmailProspects, updateProspect } from './db.js';
 import { sendEmail } from './email.js';
 import { enqueueEmail } from './emailScheduler.js';
-import { EMAIL_TOQUE_1, EMAIL_FRANQUICIA_TOQUE_1 } from '../data/emailSequences.js';
+import { EMAIL_TOQUE_1, EMAIL_FRANQUICIA_TOQUE_1, EMAIL_MIAMI_TOQUE_1 } from '../data/emailSequences.js';
+
+function esMiami(country) {
+  return (country || '').trim().toLowerCase() === 'estados unidos';
+}
 
 const STATE_PATH = process.env.EMAIL_WINDOW_STATE_PATH
   || path.join(path.dirname(process.env.DB_PATH || './sifer.db'), 'email_window_state.json');
@@ -45,9 +49,11 @@ async function checkAndSend() {
     for (const prospect of candidates) {
       try {
         const esFranquicia = prospect.franquicia && prospect.franquicia.trim();
-        const { subject, text } = esFranquicia
-          ? EMAIL_FRANQUICIA_TOQUE_1(prospect.franquicia, prospect.dm_name, prospect.gatekeeper_email, prospect.agency_name)
-          : EMAIL_TOQUE_1(prospect.country, prospect.dm_name);
+        const { subject, text } = esMiami(prospect.country)
+          ? EMAIL_MIAMI_TOQUE_1(prospect.dm_name, prospect.gatekeeper_email, prospect.agency_name)
+          : esFranquicia
+          ? EMAIL_FRANQUICIA_TOQUE_1(prospect.franquicia, prospect.country, prospect.dm_name, prospect.gatekeeper_email, prospect.agency_name)
+          : EMAIL_TOQUE_1(prospect.country, prospect.dm_name, prospect.gatekeeper_email, prospect.agency_name);
         const info = await enqueueEmail(() => sendEmail({ to: prospect.gatekeeper_email, subject, text }));
         const now = new Date().toISOString();
         updateProspect(prospect.id, {

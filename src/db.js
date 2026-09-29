@@ -74,6 +74,38 @@ export function initDb() {
     CREATE INDEX IF NOT EXISTS idx_dm_email ON prospects(dm_email);
   `);
 
+  // Agente inbound de Sifer (leads que llegan por pauta, no prospección outbound)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS inbound_leads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      phone TEXT NOT NULL UNIQUE,
+      jid TEXT NOT NULL,
+      name TEXT,
+      country TEXT,
+      stage TEXT NOT NULL DEFAULT 'OPEN',
+      team_size TEXT,
+      tier TEXT,
+      running_ads TEXT,
+      who_responds TEXT,
+      main_concern TEXT,
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      last_message_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS inbound_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lead_id INTEGER NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (lead_id) REFERENCES inbound_leads(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_inbound_phone ON inbound_leads(phone);
+    CREATE INDEX IF NOT EXISTS idx_inbound_messages_lead ON inbound_messages(lead_id);
+  `);
+
   return db;
 }
 
@@ -211,43 +243,48 @@ export function getEmailDueForToque2() {
   `).all();
 }
 
+// Miami tiene su propia secuencia (misma cadencia que Independientes: 1,3,10,17)
+// sin importar si la oficina es franquicia o no.
+const ES_FRANQUICIA_NO_MIAMI = `franquicia IS NOT NULL AND franquicia != '' AND country != 'Estados Unidos'`;
+const NO_ES_FRANQUICIA_O_MIAMI = `(franquicia IS NULL OR franquicia = '' OR country = 'Estados Unidos')`;
+
 export function getEmailDueForToque3() {
-  // Franquicias: día 8 / Independientes: día 10
+  // Franquicias (no Miami): día 8 / Independientes y Miami: día 10
   return getDb().prepare(`
     SELECT * FROM prospects
     WHERE email_stage = 'TOQUE_2_SENT'
     AND (
-      (franquicia IS NOT NULL AND franquicia != '' AND email_first_sent_at <= datetime('now', '-8 days'))
+      (${ES_FRANQUICIA_NO_MIAMI} AND email_first_sent_at <= datetime('now', '-8 days'))
       OR
-      ((franquicia IS NULL OR franquicia = '') AND email_first_sent_at <= datetime('now', '-10 days'))
+      (${NO_ES_FRANQUICIA_O_MIAMI} AND email_first_sent_at <= datetime('now', '-10 days'))
     )
     AND (email_last_reply_at IS NULL OR email_last_reply_at < email_first_sent_at)
   `).all();
 }
 
 export function getEmailDueForToque4() {
-  // Franquicias: día 15 / Independientes: día 17
+  // Franquicias (no Miami): día 15 / Independientes y Miami: día 17
   return getDb().prepare(`
     SELECT * FROM prospects
     WHERE email_stage = 'TOQUE_3_SENT'
     AND (
-      (franquicia IS NOT NULL AND franquicia != '' AND email_first_sent_at <= datetime('now', '-15 days'))
+      (${ES_FRANQUICIA_NO_MIAMI} AND email_first_sent_at <= datetime('now', '-15 days'))
       OR
-      ((franquicia IS NULL OR franquicia = '') AND email_first_sent_at <= datetime('now', '-17 days'))
+      (${NO_ES_FRANQUICIA_O_MIAMI} AND email_first_sent_at <= datetime('now', '-17 days'))
     )
     AND (email_last_reply_at IS NULL OR email_last_reply_at < email_first_sent_at)
   `).all();
 }
 
 export function getEmailDueForNoReply() {
-  // Franquicias: día 22 / Independientes: día 24
+  // Franquicias (no Miami): día 22 / Independientes y Miami: día 24
   return getDb().prepare(`
     SELECT * FROM prospects
     WHERE email_stage = 'TOQUE_4_SENT'
     AND (
-      (franquicia IS NOT NULL AND franquicia != '' AND email_first_sent_at <= datetime('now', '-22 days'))
+      (${ES_FRANQUICIA_NO_MIAMI} AND email_first_sent_at <= datetime('now', '-22 days'))
       OR
-      ((franquicia IS NULL OR franquicia = '') AND email_first_sent_at <= datetime('now', '-24 days'))
+      (${NO_ES_FRANQUICIA_O_MIAMI} AND email_first_sent_at <= datetime('now', '-24 days'))
     )
     AND (email_last_reply_at IS NULL OR email_last_reply_at < email_first_sent_at)
   `).all();

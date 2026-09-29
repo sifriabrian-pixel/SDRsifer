@@ -1,14 +1,7 @@
-// Secuencia Cold Email — Sifer v1.0
-// 4 toques en días fijos (1, 3, 10, 17) — cualquier respuesta detiene la secuencia (handoff)
-
-function casoPorPais(pais) {
-  const p = (pais || '').toLowerCase();
-  if (p.includes('paraguay') || p === 'py') return 'C21 Seven';
-  if (p.includes('ecuador') || p === 'ec') return 'RE/MAX Impacta';
-  if (p.includes('mexico') || p.includes('méxico') || p === 'mx') return 'Allegra';
-  if (p.includes('argentina') || p === 'ar') return 'Oficinas de RE/MAX';
-  return 'C21 Seven';
-}
+// Secuencias de correo — Sifer Q4 2026
+// 3 secuencias según el TIPO de prospecto (no el país): Franquicias, Independientes, Miami.
+// Franquicias: días 1, 3, 8, 15 · Independientes y Miami: días 1, 3, 10, 17.
+// Cualquier respuesta detiene la secuencia (handoff).
 
 function saludo(dmName, email, agencyName) {
   // Si hay nombre explícito del DM, usarlo
@@ -24,7 +17,7 @@ function saludo(dmName, email, agencyName) {
     }
   }
   // Email genérico — usar nombre de la agencia si está disponible
-  if (agencyName && agencyName.trim()) return `Hola equipo de ${agencyName.trim()},`;
+  if (agencyName && agencyName.trim()) return `Hola, equipo de ${agencyName.trim()},`;
   return 'Hola,';
 }
 
@@ -33,36 +26,163 @@ const FIRMA = () => {
   return `${nombre} — Sifer\nsifer.pro`;
 };
 
-// EMAIL 1 — Día 1
-export const EMAIL_TOQUE_1 = (pais, dmName) => {
-  const caso = casoPorPais(pais);
+// Recorrido de 60s del panel — se carga vía env var; si todavía no está grabado,
+// las líneas que lo mencionan se omiten en vez de mandar un link vacío.
+function lineaVideo(intro) {
+  const link = (process.env.EMAIL_LINK_VIDEO || '').trim();
+  if (!link) return '';
+  return `\n\n${intro}: ${link}`;
+}
+
+function nombreFranquicia(franquicia) {
+  const f = (franquicia || '').toLowerCase();
+  if (f.includes('remax') || f.includes('re/max') || f.includes('re max')) return 'RE/MAX';
+  if (f.includes('century') || f.includes('c21')) return 'Century 21';
+  if (f.includes('keller') || f.includes('kw')) return 'Keller Williams';
+  return franquicia || 'su franquicia';
+}
+
+// Caso local por país — según lo confirmado: solo Ecuador (RE/MAX Impacta) tiene
+// caso con nombre para Franquicias. Colombia (y Miami, que tiene su propia
+// secuencia) van sin caso, con mención regional genérica.
+function casoFranquicia(country) {
+  const c = (country || '').toLowerCase();
+  if (c.includes('colombia')) return null;
+  return { caso: 'RE/MAX Impacta', resultado: 'suma 3 asesores nuevos por mes' };
+}
+
+// ─── SECUENCIA 1 — FRANQUICIAS LATAM (RE/MAX, Century 21, Keller Williams) ──
+// Ángulo: retención y captación de asesores · Días 1, 3, 8, 15
+
+export const EMAIL_FRANQUICIA_TOQUE_1 = (franquicia, country, dmName, email, agencyName) => {
+  const marca = nombreFranquicia(franquicia);
+  const oficina = (agencyName || '').trim() || `su oficina ${marca}`;
   return {
-    subject: `Cómo ${caso} agendó +25 visitas en 60 días sin agregar asesores`,
-    text: `${saludo(dmName)}\n\n${caso} tenía el mismo problema que la mayoría de las inmobiliarias en ${pais}: leads que llegaban y se perdían porque el equipo no llegaba a hacer el seguimiento a tiempo.\n\nImplementamos un sistema de captación + respuesta automática con IA y en 60 días agendaron +25 visitas nuevas — sin contratar a nadie más.\n\n¿Tiene 20 minutos esta semana para ver si aplica a su operación?\n\n${FIRMA()}\n\n¿No es usted quien toma este tipo de decisiones? Me indica a quién escribirle y le contacto directamente.`,
+    subject: `${oficina}: una pregunta sobre tu equipo`,
+    text: `${saludo(dmName, email, agencyName)}
+
+Una pregunta directa: ¿cuántos asesores nuevos sumaste este año en ${oficina} y cuántos siguen activos hoy?
+
+Hablamos con muchas oficinas ${marca} de la región y el patrón se repite: se incorporan asesores, pero muchos no llegan a su primer cierre y terminan yéndose. Casi nunca es falta de ganas; es que no les llegan oportunidades con las que puedan trabajar.
+
+En Sifer armamos el sistema que resuelve eso: campañas que generan clientes y candidatos a asesor, un agente de IA que responde y califica por WhatsApp las 24 horas, y un panel donde ves qué pasa con cada lead.
+
+¿Te sirve que te cuente en 20 minutos cómo lo implementamos?
+
+${FIRMA()}`,
   };
 };
 
-// EMAIL 2 — Día 3 (mismo hilo, "Re:")
-export const EMAIL_TOQUE_2 = (pais, dmName) => {
+export const EMAIL_FRANQUICIA_TOQUE_2 = (franquicia, country, dmName, email, agencyName) => {
   return {
     subjectPrefix: 'Re: ',
-    text: `${saludo(dmName)}\n\nLe sigo de cerca porque me parece que lo que hacemos tiene sentido para una operación como la suya.\n\nLa pregunta que más nos hacen los directores antes de vernos es: "¿Y esto funciona para equipos chicos?"\n\nSí. De hecho es donde más se nota — porque cuando el equipo es chico, cada lead perdido es una venta que no existió.\n\n¿Le sirve hablar 20 minutos esta semana?\n\n${FIRMA()}`,
+    text: `${saludo(dmName, email, agencyName)}, sumo algo a mi correo anterior.
+
+Los asesores buenos no se van a la oficina que paga mejor comisión: se van a la que tiene mejor sistema. Leads que llegan calificados, respuesta inmediata y un proceso claro para no perder a nadie.
+
+Eso es lo que hoy separa a las oficinas que retienen talento de las que viven reclutando. ¿Lo conversamos esta semana?
+
+${FIRMA()}`,
   };
 };
 
-// EMAIL 3 — Día 10
-export const EMAIL_TOQUE_3 = (pais, dmName) => {
+export const EMAIL_FRANQUICIA_TOQUE_3 = (franquicia, country, dmName, email, agencyName) => {
+  const oficina = (agencyName || '').trim() || 'tu oficina';
+  const c = casoFranquicia(country);
+  const resultadoLinea = c
+    ? `Resultado en ${c.caso}: ${c.resultado}.`
+    : `Trabajamos con inmobiliarias en toda la región con resultados similares.`;
+  return {
+    subject: `Cómo trabaja${c ? ` ${c.caso}` : 'n otras oficinas'} con sus leads y sus asesores`,
+    text: `${saludo(dmName, email, agencyName)}
+
+Te cuento en concreto cómo funciona el sistema:
+
+Campañas en Meta generan clientes y también candidatos a asesor.
+El agente de IA responde por WhatsApp en segundos, a cualquier hora. Califica y deriva al asesor correcto con toda la conversación.
+En el panel ves el embudo completo: leads nuevos, calificados y derivados, cuántos llegaron fuera de horario, cuántos se reactivaron y de qué campaña vino cada uno.
+
+${resultadoLinea}${lineaVideo('Grabé un recorrido de 60 segundos por el panel')}
+
+Si le ves sentido para ${oficina}, ¿nos tomamos 20 minutos?
+
+${FIRMA()}`,
+  };
+};
+
+export const EMAIL_FRANQUICIA_TOQUE_4 = (franquicia, country, dmName, email, agencyName) => {
+  const oficina = (agencyName || '').trim() || 'tu oficina';
+  const linkedin = (process.env.SDR_LINKEDIN || '').trim();
+  const linkedinLinea = linkedin ? ` (${linkedin})` : '';
+  return {
+    subject: `Cierro por acá${dmName ? `, ${dmName.trim()}` : ''}`,
+    text: `${saludo(dmName, email, agencyName)} no quiero llenarte la bandeja, así que este es mi último correo.
+
+Si en algún momento quieres revisar cómo rinden tus leads o tu captación de asesores, me encuentras en LinkedIn${linkedinLinea} o respondiendo este mismo correo.
+
+Éxitos con ${oficina} en este cierre de año.
+
+${FIRMA()}`,
+  };
+};
+
+// ─── SECUENCIA 2 — INDEPENDIENTES LATAM (hoy: Paraguay) ────────────────────
+// Ángulo: leads que se pierden sin seguimiento · Días 1, 3, 10, 17
+// Caso: Century 21 Seven (Asunción) — 2 ventas en los primeros 45 días.
+
+export const EMAIL_TOQUE_1 = (pais, dmName, email, agencyName) => {
+  return {
+    subject: `Cómo Century 21 Seven logró 2 ventas en los primeros 45 días`,
+    text: `${saludo(dmName, email, agencyName)}
+
+Century 21 Seven tenía el mismo problema que la mayoría de las inmobiliarias: los leads llegaban, pero muchos se enfriaban antes de que alguien los atendiera.
+
+Implementamos un agente de IA que responde por WhatsApp en segundos, califica al cliente y agenda la visita con el asesor. Resultado: 2 ventas en los primeros 45 días.
+
+¿Tienes 20 minutos esta semana para ver si aplica a tu oficina?
+
+${FIRMA()}`,
+  };
+};
+
+export const EMAIL_TOQUE_2 = (pais, dmName, email, agencyName) => {
+  return {
+    subjectPrefix: 'Re: ',
+    text: `${saludo(dmName, email, agencyName)} una duda que me plantean seguido: "¿esto funciona para un equipo chico?"
+
+Es justamente donde más impacto tiene. Si son dos o tres personas, nadie puede responder a las 10 de la noche ni seguir 40 conversaciones a la vez. El agente cubre ese hueco y le pasa a tu equipo solo los contactos calificados, con todo el historial.
+
+¿Lo vemos en una llamada corta?
+
+${FIRMA()}`,
+  };
+};
+
+export const EMAIL_TOQUE_3 = (pais, dmName, email, agencyName) => {
   return {
     subject: `El problema no es la cantidad de leads`,
-    text: `${saludo(dmName)}\n\nUn patrón que vemos seguido en inmobiliarias de ${pais}:\n\nInvierten en portales, en publicidad, en ferias — y los leads llegan. El problema es que el 60–70% de esos leads nunca recibe seguimiento antes de que se enfríen.\n\nNo porque el equipo no quiera. Sino porque no hay un sistema que lo haga automáticamente.\n\nEso es exactamente lo que resolvemos en Sifer.\n\n¿Tiene 20 minutos esta semana para verlo aplicado a su operación?\n\n${FIRMA()}`,
+    text: `${saludo(dmName, email, agencyName)}
+
+La mayoría de las inmobiliarias con las que hablamos cree que necesita más leads. Cuando miramos los números, el problema es otro: la mayoría de los contactos que ya llegan nunca recibe un segundo mensaje.
+
+Por eso, además del agente, sumamos un panel donde ves todo: cuántos leads entraron, cuántos se calificaron, cuántos llegaron fuera de horario y de qué campaña vino cada uno. Dejas de medir clics y empiezas a medir visitas.${lineaVideo('Te dejo un recorrido de 60 segundos')}
+
+¿Te interesa ver cómo se vería con tus leads?
+
+${FIRMA()}`,
   };
 };
 
-// EMAIL 4 — Día 17 (último)
-export const EMAIL_TOQUE_4 = (pais, dmName) => {
+export const EMAIL_TOQUE_4 = (pais, dmName, email, agencyName) => {
   return {
-    subject: `Último mensaje de mi parte`,
-    text: `${saludo(dmName)}\n\nLe mandé algunos mensajes las últimas semanas y entiendo que quizás no es el momento o no es algo que le genere interés ahora.\n\nSolo quería decirle que si en algún momento quiere revisar cómo mejorar la captación y el seguimiento de leads en su oficina, quedamos disponibles en sifer.pro.\n\nLo que hacemos tiene resultados concretos en inmobiliarias de ${pais} — cuando sea el momento, con gusto hablamos.\n\n${FIRMA()}`,
+    subject: `¿Lo dejamos para más adelante?`,
+    text: `${saludo(dmName, email, agencyName)} este es mi último mensaje. Entiendo que quizás no sea el momento.
+
+Si más adelante quieres revisar cuántos leads se están quedando sin respuesta en tu oficina, responde este correo y lo vemos.
+
+¡Éxitos!
+
+${FIRMA()}`,
   };
 };
 
@@ -70,99 +190,65 @@ export const EMAIL_TOQUE_4 = (pais, dmName) => {
 export const EMAIL_NO_ES_DECISOR = () =>
   `Entendido, gracias! ¿Me podría pasar el contacto (email) de la persona que toma esas decisiones para escribirle directamente?`;
 
-// ─── SECUENCIA FRANQUICIAS (RE/MAX y Century 21) ───────────────────────────
-// Ángulo: retención y atracción de asesores · Días 1, 3, 8, 15
+// ─── SECUENCIA 3 — MIAMI ─────────────────────────────────────────────────
+// Ángulo: comprador internacional que escribe fuera de horario · Días 1, 3, 10, 17
+// Sin caso con nombre ni cifra (por decisión de Brian) · pie legal obligatorio,
+// sin dirección física (por decisión de Brian) — solo línea de baja.
 
-function casoFranquicia(franquicia) {
-  const f = (franquicia || '').toLowerCase();
-  if (f.includes('remax') || f.includes('re/max') || f.includes('re max')) return 'RE/MAX Impacta';
-  if (f.includes('century') || f.includes('c21')) return 'C21 Seven';
-  return 'RE/MAX Impacta';
-}
+const LEGAL_MIAMI = `\n\nSifer · Si no quieres recibir más correos, responde "baja" y te quitamos de la lista.`;
 
-function nombreFranquicia(franquicia) {
-  const f = (franquicia || '').toLowerCase();
-  if (f.includes('remax') || f.includes('re/max') || f.includes('re max')) return 'RE/MAX';
-  if (f.includes('century') || f.includes('c21')) return 'C21';
-  return 'RE/MAX';
-}
-
-function pruebaFranquicia(franquicia) {
-  const f = (franquicia || '').toLowerCase();
-  if (f.includes('remax') || f.includes('re/max') || f.includes('re max'))
-    return 'RE/MAX Impacta: agendaron +25 visitas en 60 días sin sumar un solo asesor nuevo al equipo.';
-  return 'C21 Seven: 44 asesores integrados al sistema en Paraguay, sin fricciones.';
-}
-
-// FRANQUICIA TOQUE 1 — Día 1
-export const EMAIL_FRANQUICIA_TOQUE_1 = (franquicia, dmName, email, agencyName) => {
-  const marca = nombreFranquicia(franquicia);
+export const EMAIL_MIAMI_TOQUE_1 = (dmName, email, agencyName) => {
   return {
-    subject: `¿Cuántos de sus asesores nuevos siguen activos hoy?`,
+    subject: `Tus compradores de LATAM escriben a las 11 pm`,
     text: `${saludo(dmName, email, agencyName)}
 
-Le escribo desde Sifer, trabajamos con oficinas ${marca} en la región.
+Si tu cliente está en Bogotá, Caracas o Buenos Aires, lo más probable es que te escriba por WhatsApp cuando en Miami ya cerró la oficina. Y un inversor que no recibe respuesta esa noche, a la mañana ya le escribió a otro broker.
 
-Quería hacerle una pregunta directa: ¿cuántos asesores nuevos sumó su oficina en los últimos 3 meses? Y de esos, ¿cuántos siguen activos hoy?
+En Sifer trabajamos con inmobiliarias de toda Latinoamérica con un agente de IA que responde en segundos y en español. Califica presupuesto, plazo y tipo de propiedad, y agenda una videollamada con tu equipo.
 
-Si la respuesta no es tan buena como le gustaría, no es un problema aislado — es el patrón que vemos en la mayoría de las oficinas de la red.
+¿Te muestro en 20 minutos cómo se vería con tus leads?
 
-¿Le interesa que le cuente en 20 minutos qué está haciendo distinto la oficina que sí lo resolvió?
-
-Si usted no es quien toma esta decisión, le agradezco si me indica a quién puedo escribirle.
-
-${FIRMA()}`,
+${FIRMA()}${LEGAL_MIAMI}`,
   };
 };
 
-// FRANQUICIA TOQUE 2 — Día 3 (mismo hilo)
-export const EMAIL_FRANQUICIA_TOQUE_2 = (franquicia, dmName, email, agencyName) => {
+export const EMAIL_MIAMI_TOQUE_2 = (dmName, email, agencyName) => {
   return {
     subjectPrefix: 'Re: ',
-    text: `${saludo(dmName, email, agencyName)}
+    text: `${saludo(dmName, email, agencyName)} respondo algo que me dicen seguido: "ya tengo CRM".
 
-Sumo un dato al mensaje anterior: en la mayoría de los casos que vemos, no es un tema de reclutar más — es que los asesores buenos se terminan yendo a la oficina que les da mejores leads y sistema, no a la que mejor comisión paga.
+El agente no reemplaza tu CRM: trabaja antes. Atiende el primer contacto, filtra a los curiosos y le entrega a tu equipo solo compradores calificados, con toda la conversación. Y aunque tus clientes lleguen por referidos, igual escriben por WhatsApp a cualquier hora; la primera respuesta sigue definiendo quién se queda con el cliente.
 
-Y esto no es solo para equipos grandes: lo estamos viendo tanto en oficinas de 6-8 asesores como en equipos de 40+.
+¿Le ves sentido a esto?
 
-¿Le pasó con algún asesor fuerte del equipo en el último tiempo?
-
-${FIRMA()}`,
+${FIRMA()}${LEGAL_MIAMI}`,
   };
 };
 
-// FRANQUICIA TOQUE 3 — Día 8 (nuevo hilo)
-export const EMAIL_FRANQUICIA_TOQUE_3 = (franquicia, dmName, email, agencyName) => {
-  const caso = casoFranquicia(franquicia);
-  const prueba = pruebaFranquicia(franquicia);
+export const EMAIL_MIAMI_TOQUE_3 = (dmName, email, agencyName) => {
   return {
-    subject: `Lo que está usando ${caso} para no perder asesores`,
+    subject: `Compradores que tardan meses en decidir`,
     text: `${saludo(dmName, email, agencyName)}
 
-Le cuento brevemente en qué consiste lo que mencioné: un sistema que atiende y califica leads con IA las 24 horas y se los entrega listos a su equipo comercial — sin que nada se pierda entre la generación y el cierre.
+El comprador internacional no cierra en una semana: compara, viaja, espera la preventa correcta. El riesgo no es que no llegue, es que en esos meses nadie le haga seguimiento y termine comprando con otro.
 
-Eso termina siendo el diferencial real para atraer y retener a los asesores que ya tiene.
+Nuestro sistema mantiene la conversación activa y reactiva a los contactos que se enfriaron. En un panel ves cuántos llegaron fuera de horario, cuántos se reactivaron y desde qué campaña llegó cada uno.${lineaVideo('Recorrido de 60 segundos')}
 
-Ya lo está usando ${prueba}
+¿Lo vemos en una llamada?
 
-¿Le sirve que se lo muestre en una llamada de 20 minutos, sin compromiso? ¿Mañana o el miércoles?
-
-${FIRMA()}`,
+${FIRMA()}${LEGAL_MIAMI}`,
   };
 };
 
-// FRANQUICIA TOQUE 4 — Día 15
-export const EMAIL_FRANQUICIA_TOQUE_4 = (franquicia, dmName, email, agencyName) => {
+export const EMAIL_MIAMI_TOQUE_4 = (dmName, email, agencyName) => {
   return {
-    subject: `Último mensaje de mi parte`,
-    text: `${saludo(dmName, email, agencyName)}
+    subject: `Cierro por acá${dmName ? `, ${dmName.trim()}` : ''}`,
+    text: `${saludo(dmName, email, agencyName)} este es mi último correo.
 
-Le dejo este como último email de mi parte — no quiero ser invasivo.
+Si en algún momento quieres dejar de perder compradores de Latinoamérica fuera de horario, responde este mensaje y coordinamos.
 
-Si en algún momento retener o atraer asesores fuertes vuelve a ser prioridad para la oficina, quedo disponible.
+Mucho éxito.
 
-Lo sigo por LinkedIn de todas formas, por si le sirve ver ahí lo que compartimos sobre este tema.
-
-${FIRMA()}`,
+${FIRMA()}${LEGAL_MIAMI}`,
   };
 };

@@ -11,15 +11,19 @@ import { isWithinSendWindow } from './sendWindow.js';
 import {
   EMAIL_TOQUE_2, EMAIL_TOQUE_3, EMAIL_TOQUE_4,
   EMAIL_FRANQUICIA_TOQUE_2, EMAIL_FRANQUICIA_TOQUE_3, EMAIL_FRANQUICIA_TOQUE_4,
+  EMAIL_MIAMI_TOQUE_2, EMAIL_MIAMI_TOQUE_3, EMAIL_MIAMI_TOQUE_4,
 } from '../data/emailSequences.js';
 
 const CHECK_INTERVAL_MS = 10 * 60 * 1000; // cada 10 minutos (la ventana es de 1hs, hay que revisar seguido)
 
+function esMiami(country) {
+  return (country || '').trim().toLowerCase() === 'estados unidos';
+}
+
 async function sendToque(prospect, stageAfter, buildFn, isReply) {
   if (!isWithinSendWindow(prospect.country)) return; // se reintenta en el próximo poll, dentro de la ventana
 
-  const pais = prospect.country || '[país]';
-  const built = buildFn(pais, prospect.dm_name);
+  const built = buildFn();
   const subject = isReply ? `${built.subjectPrefix}${prospect.email_subject}` : built.subject;
 
   try {
@@ -37,23 +41,23 @@ async function sendToque(prospect, stageAfter, buildFn, isReply) {
   }
 }
 
+function elegirBuild(prospect, franquiciaFn, independienteFn, miamiFn) {
+  if (esMiami(prospect.country)) return () => miamiFn(prospect.dm_name, prospect.gatekeeper_email, prospect.agency_name);
+  if (prospect.franquicia?.trim()) return () => franquiciaFn(prospect.franquicia, prospect.country, prospect.dm_name, prospect.gatekeeper_email, prospect.agency_name);
+  return () => independienteFn(prospect.country, prospect.dm_name, prospect.gatekeeper_email, prospect.agency_name);
+}
+
 async function runEmailSequenceCheck() {
   for (const prospect of getEmailDueForToque2()) {
-    const buildFn = prospect.franquicia?.trim()
-      ? (_, n) => EMAIL_FRANQUICIA_TOQUE_2(prospect.franquicia, n, prospect.gatekeeper_email, prospect.agency_name)
-      : (_, n) => EMAIL_TOQUE_2(prospect.country, n);
+    const buildFn = elegirBuild(prospect, EMAIL_FRANQUICIA_TOQUE_2, EMAIL_TOQUE_2, EMAIL_MIAMI_TOQUE_2);
     await sendToque(prospect, 'TOQUE_2_SENT', buildFn, true);
   }
   for (const prospect of getEmailDueForToque3()) {
-    const buildFn = prospect.franquicia?.trim()
-      ? (_, n) => EMAIL_FRANQUICIA_TOQUE_3(prospect.franquicia, n, prospect.gatekeeper_email, prospect.agency_name)
-      : (_, n) => EMAIL_TOQUE_3(prospect.country, n);
+    const buildFn = elegirBuild(prospect, EMAIL_FRANQUICIA_TOQUE_3, EMAIL_TOQUE_3, EMAIL_MIAMI_TOQUE_3);
     await sendToque(prospect, 'TOQUE_3_SENT', buildFn, false);
   }
   for (const prospect of getEmailDueForToque4()) {
-    const buildFn = prospect.franquicia?.trim()
-      ? (_, n) => EMAIL_FRANQUICIA_TOQUE_4(prospect.franquicia, n, prospect.gatekeeper_email, prospect.agency_name)
-      : (_, n) => EMAIL_TOQUE_4(prospect.country, n);
+    const buildFn = elegirBuild(prospect, EMAIL_FRANQUICIA_TOQUE_4, EMAIL_TOQUE_4, EMAIL_MIAMI_TOQUE_4);
     await sendToque(prospect, 'TOQUE_4_SENT', buildFn, false);
   }
   for (const prospect of getEmailDueForNoReply()) {

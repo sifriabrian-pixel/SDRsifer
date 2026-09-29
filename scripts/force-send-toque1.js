@@ -6,9 +6,13 @@ import 'dotenv/config';
 import { initDb, getPendingEmailProspects, updateProspect } from '../src/db.js';
 import { sendEmail } from '../src/email.js';
 import { enqueueEmail } from '../src/emailScheduler.js';
-import { EMAIL_TOQUE_1, EMAIL_FRANQUICIA_TOQUE_1 } from '../data/emailSequences.js';
+import { EMAIL_TOQUE_1, EMAIL_FRANQUICIA_TOQUE_1, EMAIL_MIAMI_TOQUE_1 } from '../data/emailSequences.js';
 
 const LIMITE = parseInt(process.argv[2]) || 50;
+
+function esMiami(country) {
+  return (country || '').trim().toLowerCase() === 'estados unidos';
+}
 
 async function main() {
   initDb();
@@ -22,9 +26,11 @@ async function main() {
   for (const prospect of pending) {
     try {
       const esFranquicia = prospect.franquicia && prospect.franquicia.trim();
-      const { subject, text } = esFranquicia
-        ? EMAIL_FRANQUICIA_TOQUE_1(prospect.franquicia, prospect.dm_name, prospect.gatekeeper_email, prospect.agency_name)
-        : EMAIL_TOQUE_1(prospect.country, prospect.dm_name);
+      const { subject, text } = esMiami(prospect.country)
+        ? EMAIL_MIAMI_TOQUE_1(prospect.dm_name, prospect.gatekeeper_email, prospect.agency_name)
+        : esFranquicia
+        ? EMAIL_FRANQUICIA_TOQUE_1(prospect.franquicia, prospect.country, prospect.dm_name, prospect.gatekeeper_email, prospect.agency_name)
+        : EMAIL_TOQUE_1(prospect.country, prospect.dm_name, prospect.gatekeeper_email, prospect.agency_name);
 
       const info = await enqueueEmail(() => sendEmail({ to: prospect.gatekeeper_email, subject, text }));
       const now = new Date().toISOString();

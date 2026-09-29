@@ -77,6 +77,45 @@ function calcularMetricas(rows) {
   };
 }
 
+// Etapas de email que implican que el prospecto respondió (aunque sea para
+// decir "no soy yo") — igual que CONTESTARON pero para el pipeline de correo.
+const EMAIL_CONTESTARON = ['AGUARDANDO_REDIRECT', 'HANDED_OFF'];
+
+// Métricas del pipeline de email de un conjunto de filas ya filtradas por país
+function calcularMetricasEmail(rows) {
+  const conEmail = rows.filter((r) => r.gatekeeper_email && r.gatekeeper_email.trim());
+  const total = conEmail.length;
+  const pendientes = conEmail.filter((r) => r.email_stage === 'PENDING').length;
+  const enviados = conEmail.filter((r) => r.email_stage !== 'PENDING').length;
+  const toque1 = conEmail.filter((r) => r.email_stage === 'TOQUE_1_SENT').length;
+  const toque2 = conEmail.filter((r) => r.email_stage === 'TOQUE_2_SENT').length;
+  const toque3 = conEmail.filter((r) => r.email_stage === 'TOQUE_3_SENT').length;
+  const toque4 = conEmail.filter((r) => r.email_stage === 'TOQUE_4_SENT').length;
+  const sinRespuesta = conEmail.filter((r) => r.email_stage === 'NO_REPLY').length;
+  const contestaron = conEmail.filter((r) => EMAIL_CONTESTARON.includes(r.email_stage)).length;
+  const handoff = conEmail.filter((r) => r.email_stage === 'HANDED_OFF').length;
+  const rebotados = conEmail.filter((r) => r.email_stage === 'BOUNCED').length;
+
+  const tasaRespuesta = enviados > 0 ? Math.round((contestaron / enviados) * 100) : null;
+  const tasaRebote = enviados > 0 ? Math.round((rebotados / enviados) * 100) : null;
+
+  return {
+    total,
+    pendientes,
+    enviados,
+    toque1,
+    toque2,
+    toque3,
+    toque4,
+    sinRespuesta,
+    contestaron,
+    handoff,
+    rebotados,
+    tasaRespuesta,
+    tasaRebote,
+  };
+}
+
 export function getStats() {
   const rows = getDb().prepare(`SELECT * FROM prospects`).all();
 
@@ -91,9 +130,18 @@ export function getStats() {
     .sort((a, b) => porPais[b].length - porPais[a].length)
     .map((pais) => ({ pais, ...calcularMetricas(porPais[pais]) }));
 
+  const paisesEmail = Object.keys(porPais)
+    .filter((pais) => porPais[pais].some((r) => r.gatekeeper_email && r.gatekeeper_email.trim()))
+    .sort((a, b) => porPais[b].length - porPais[a].length)
+    .map((pais) => ({ pais, ...calcularMetricasEmail(porPais[pais]) }));
+
   return {
     total: calcularMetricas(rows),
     paises,
+    email: {
+      total: calcularMetricasEmail(rows),
+      paises: paisesEmail,
+    },
   };
 }
 
@@ -111,6 +159,11 @@ const FILTROS = {
   derivaron_dm: (r) => r.dm_jid && r.dm_jid !== r.gatekeeper_jid,
   handoff: (r) => r.stage === 'HANDED_OFF',
   descartados: (r) => r.stage === 'DISCARDED',
+  email_enviados: (r) => r.gatekeeper_email && r.email_stage !== 'PENDING',
+  email_contestaron: (r) => EMAIL_CONTESTARON.includes(r.email_stage),
+  email_handoff: (r) => r.email_stage === 'HANDED_OFF',
+  email_sin_respuesta: (r) => r.email_stage === 'NO_REPLY',
+  email_rebotados: (r) => r.email_stage === 'BOUNCED',
 };
 
 export function listarPorCategoria(categoria, pais) {

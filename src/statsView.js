@@ -24,6 +24,11 @@ const CATEGORIA_LABEL = {
   derivaron_dm: 'Derivaron a DM',
   handoff: 'Handoff (listos)',
   descartados: 'Descartados',
+  email_enviados: 'Email — Enviados',
+  email_contestaron: 'Email — Contestaron',
+  email_handoff: 'Email — Handoff',
+  email_sin_respuesta: 'Email — Sin respuesta',
+  email_rebotados: 'Email — Rebotados',
 };
 
 function layout(titulo, contenido) {
@@ -70,6 +75,25 @@ function link(categoria, pais, texto) {
 
 export function renderStatsPage(stats) {
   const t = stats.total;
+  const e = stats.email.total;
+
+  const filasEmail = stats.email.paises
+    .map(
+      (p) => `<tr>
+        <td>${p.pais}</td>
+        <td>${link('email_enviados', p.pais, p.enviados)}</td>
+        <td>${p.toque1}</td>
+        <td>${p.toque2}</td>
+        <td>${p.toque3}</td>
+        <td>${p.toque4}</td>
+        <td>${link('email_contestaron', p.pais, p.contestaron)}</td>
+        <td>${link('email_handoff', p.pais, p.handoff)}</td>
+        <td>${link('email_sin_respuesta', p.pais, p.sinRespuesta)}</td>
+        <td class="red">${link('email_rebotados', p.pais, p.rebotados)}</td>
+        <td>${p.pendientes}</td>
+      </tr>`
+    )
+    .join('');
 
   const filas = stats.paises
     .map(
@@ -118,20 +142,50 @@ export function renderStatsPage(stats) {
         <tbody>${filas}</tbody>
       </table>
     </div>
+
+    <h1 style="margin-top:36px;">Email</h1>
+    <h2>Secuencia de correo (Franquicias / Independientes / Miami) · datos en vivo</h2>
+
+    <div class="cards">
+      ${card(e.enviados, 'Enviados (total)')}
+      ${card(e.toque1, 'En toque 1')}
+      ${card(e.toque2, 'En toque 2')}
+      ${card(e.toque3, 'En toque 3')}
+      ${card(e.toque4, 'En toque 4')}
+      ${card(e.contestaron, 'Contestaron')}
+      ${card(e.tasaRespuesta != null ? e.tasaRespuesta + '%' : '—', 'Tasa de respuesta')}
+      ${card(e.handoff, 'Derivados a Brian (handoff)', 'green')}
+      ${card(e.sinRespuesta, 'Sin respuesta (secuencia completa)', 'yellow')}
+      ${card(e.rebotados, 'Rebotados', 'red')}
+      ${card(e.pendientes, 'Pendientes en cola', 'yellow')}
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>País</th><th>Enviados</th><th>Toque 1</th><th>Toque 2</th><th>Toque 3</th><th>Toque 4</th>
+            <th>Contestaron</th><th>Handoff</th><th>Sin respuesta</th><th>Rebotados</th><th>Pendientes</th>
+          </tr>
+        </thead>
+        <tbody>${filasEmail}</tbody>
+      </table>
+    </div>
   `;
   return layout('Dashboard', contenido);
 }
 
 export function renderDetallePage(categoria, pais, rows) {
   const titulo = CATEGORIA_LABEL[categoria] || categoria;
+  const esEmail = categoria.startsWith('email_');
   const filas = rows
     .map(
       (r) => `<tr>
         <td>${r.agency_name}</td>
         <td>${r.country || ''}</td>
-        <td>${r.gatekeeper_phone}</td>
-        <td><span class="pill">${r.stage}</span></td>
-        <td>${(r.last_message_at || r.created_at || '').slice(0, 16).replace('T', ' ')}</td>
+        <td>${esEmail ? (r.gatekeeper_email || '') : r.gatekeeper_phone}</td>
+        <td><span class="pill">${esEmail ? r.email_stage : r.stage}</span></td>
+        <td>${((esEmail ? (r.email_last_message_at || r.email_first_sent_at) : (r.last_message_at || r.created_at)) || '').slice(0, 16).replace('T', ' ')}</td>
       </tr>`
     )
     .join('');
@@ -142,7 +196,7 @@ export function renderDetallePage(categoria, pais, rows) {
     <h2>${rows.length} prospectos</h2>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Agencia</th><th>País</th><th>Teléfono</th><th>Etapa</th><th>Último mensaje</th></tr></thead>
+        <thead><tr><th>Agencia</th><th>País</th><th>${esEmail ? 'Email' : 'Teléfono'}</th><th>Etapa</th><th>Último mensaje</th></tr></thead>
         <tbody>${filas || '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">Sin resultados</td></tr>'}</tbody>
       </table>
     </div>

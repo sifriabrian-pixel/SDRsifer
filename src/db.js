@@ -202,6 +202,7 @@ export function getPendingEmailProspects(limit = 50) {
   return getDb().prepare(`
     SELECT * FROM prospects
     WHERE email_stage = 'PENDING' AND gatekeeper_email IS NOT NULL AND gatekeeper_email != ''
+      AND stage != 'DISCARDED'
       AND (
         stage = 'NO_WHATSAPP' OR gatekeeper_phone IS NULL OR gatekeeper_phone = '' OR gatekeeper_phone = 'sin-telefono'
         OR country = 'Estados Unidos'

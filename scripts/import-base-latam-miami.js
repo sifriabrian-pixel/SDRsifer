@@ -83,7 +83,9 @@ async function main() {
         continue;
       }
 
-      const telefonoFinal = (whatsapp || '').trim() || (telefono || '').trim();
+      // Algunas celdas traen mas de un numero separado por "/" (telefono alternativo)
+      // — quedarse solo con el primero, si no los digitos de ambos quedan pegados.
+      const telefonoFinal = ((whatsapp || '').trim() || (telefono || '').trim()).split('/')[0].trim();
       const digits = telefonoFinal.replace(/\D/g, '');
       if (!digits) { sinTelefono++; continue; }
 

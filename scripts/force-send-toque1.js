@@ -1,6 +1,7 @@
 // Envío manual del Toque 1 — saltea la ventana horaria
-// Uso: node scripts/force-send-toque1.js [limite]
+// Uso: node scripts/force-send-toque1.js [limite] [pais]
 // Ejemplo: node scripts/force-send-toque1.js 50
+//          node scripts/force-send-toque1.js 20 "Estados Unidos"
 
 import 'dotenv/config';
 import { initDb, getPendingEmailProspects, updateProspect } from '../src/db.js';
@@ -9,6 +10,7 @@ import { enqueueEmail } from '../src/emailScheduler.js';
 import { EMAIL_TOQUE_1, EMAIL_FRANQUICIA_TOQUE_1, EMAIL_MIAMI_TOQUE_1 } from '../data/emailSequences.js';
 
 const LIMITE = parseInt(process.argv[2]) || 50;
+const PAIS_FILTRO = process.argv[3] || null;
 
 function esMiami(country) {
   return (country || '').trim().toLowerCase() === 'estados unidos';
@@ -17,8 +19,13 @@ function esMiami(country) {
 async function main() {
   initDb();
 
-  const pending = getPendingEmailProspects(LIMITE);
-  console.log(`\n📧 Enviando Toque 1 a ${pending.length} prospectos (límite: ${LIMITE})\n`);
+  // getPendingEmailProspects no filtra por país — si se pidió uno, se trae un
+  // pool grande y se filtra acá, para no tocar la query compartida con el auto-sender.
+  const pool = getPendingEmailProspects(PAIS_FILTRO ? 500 : LIMITE);
+  const pending = PAIS_FILTRO
+    ? pool.filter((p) => (p.country || '').trim().toLowerCase() === PAIS_FILTRO.trim().toLowerCase()).slice(0, LIMITE)
+    : pool;
+  console.log(`\n📧 Enviando Toque 1 a ${pending.length} prospectos (límite: ${LIMITE}${PAIS_FILTRO ? `, país: ${PAIS_FILTRO}` : ''})\n`);
 
   let enviados = 0;
   let errores = 0;

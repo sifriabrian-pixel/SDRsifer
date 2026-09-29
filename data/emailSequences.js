@@ -42,13 +42,12 @@ function nombreFranquicia(franquicia) {
   return franquicia || 'su franquicia';
 }
 
-// Caso local por país — según lo confirmado: solo Ecuador (RE/MAX Impacta) tiene
-// caso con nombre para Franquicias. Colombia (y Miami, que tiene su propia
-// secuencia) van sin caso, con mención regional genérica.
+// Caso local por país — sin nombrar la oficina, solo describirla. Colombia
+// (y Miami, que tiene su propia secuencia) van sin caso, con mención regional genérica.
 function casoFranquicia(country) {
   const c = (country || '').toLowerCase();
   if (c.includes('colombia')) return null;
-  return { caso: 'RE/MAX Impacta', resultado: 'suma 3 asesores nuevos por mes' };
+  return { caso: 'una oficina RE/MAX top 3 de Ecuador', resultado: 'suma 3 asesores nuevos por mes' };
 }
 
 // ─── SECUENCIA 1 — FRANQUICIAS LATAM (RE/MAX, Century 21, Keller Williams) ──
@@ -128,14 +127,14 @@ ${FIRMA()}`,
 
 // ─── SECUENCIA 2 — INDEPENDIENTES LATAM (hoy: Paraguay) ────────────────────
 // Ángulo: leads que se pierden sin seguimiento · Días 1, 3, 10, 17
-// Caso: Century 21 Seven (Asunción) — 2 ventas en los primeros 45 días.
+// Caso: una oficina de Century 21 en Paraguay con más de 40 asesores — 2 ventas en los primeros 45 días.
 
 export const EMAIL_TOQUE_1 = (pais, dmName, email, agencyName) => {
   return {
-    subject: `Cómo Century 21 Seven logró 2 ventas en los primeros 45 días`,
+    subject: `Cómo una oficina C21 de Paraguay (40+ asesores) logró 2 ventas en 45 días`,
     text: `${saludo(dmName, email, agencyName)}
 
-Century 21 Seven tenía el mismo problema que la mayoría de las inmobiliarias: los leads llegaban, pero muchos se enfriaban antes de que alguien los atendiera.
+Una oficina de Century 21 en Paraguay, con más de 40 asesores, tenía el mismo problema que la mayoría de las inmobiliarias: los leads llegaban, pero muchos se enfriaban antes de que alguien los atendiera.
 
 Implementamos un agente de IA que responde por WhatsApp en segundos, califica al cliente y agenda la visita con el asesor. Resultado: 2 ventas en los primeros 45 días.
 

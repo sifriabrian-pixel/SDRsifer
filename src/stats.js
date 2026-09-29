@@ -34,10 +34,37 @@ const CONTESTARON = [
   'HANDED_OFF',
 ];
 
-// Métricas base de un conjunto de filas ya filtradas por país (o todas)
-function calcularMetricas(rows) {
+// Rangos de fecha admitidos por el dashboard — null/undefined = todo el historial.
+const RANGOS_VALIDOS = ['7', '30'];
+
+function cutoffDesdeRango(range) {
+  if (!RANGOS_VALIDOS.includes(String(range))) return null;
+  const dias = parseInt(range, 10);
+  return new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function fechaActividadWhatsapp(r) {
+  return r.last_message_at || r.created_at || null;
+}
+
+function fechaActividadEmail(r) {
+  return r.email_last_message_at || r.email_first_sent_at || null;
+}
+
+function dentroDelRango(fecha, cutoffISO) {
+  if (!cutoffISO) return true;
+  if (!fecha) return false;
+  return fecha >= cutoffISO;
+}
+
+// Métricas base de un conjunto de filas ya filtradas por país (o todas).
+// "pendientes" siempre refleja la cola actual completa, sin filtrar por fecha
+// (es "cuánto falta mandar hoy"); el resto se recorta al rango pedido.
+function calcularMetricas(rowsPais, cutoffISO) {
+  const pendientes = rowsPais.filter((r) => r.stage === 'PENDING').length;
+  const rows = rowsPais.filter((r) => dentroDelRango(fechaActividadWhatsapp(r), cutoffISO));
+
   const total = rows.length;
-  const pendientes = rows.filter((r) => r.stage === 'PENDING').length;
   const emailOnly = rows.filter((r) => r.stage === 'EMAIL_ONLY').length;
   const enviados = rows.filter((r) => !NUNCA_ENVIADO.includes(r.stage) && r.stage !== 'SKIPPED').length;
   const sinWhatsapp = rows.filter((r) => r.stage === 'NO_WHATSAPP').length;
@@ -82,10 +109,13 @@ function calcularMetricas(rows) {
 const EMAIL_CONTESTARON = ['AGUARDANDO_REDIRECT', 'HANDED_OFF'];
 
 // Métricas del pipeline de email de un conjunto de filas ya filtradas por país
-function calcularMetricasEmail(rows) {
-  const conEmail = rows.filter((r) => r.gatekeeper_email && r.gatekeeper_email.trim());
+// (mismo criterio: pendientes es la cola actual sin filtrar; el resto se recorta al rango).
+function calcularMetricasEmail(rowsPais, cutoffISO) {
+  const conEmailTodos = rowsPais.filter((r) => r.gatekeeper_email && r.gatekeeper_email.trim());
+  const pendientes = conEmailTodos.filter((r) => r.email_stage === 'PENDING').length;
+  const conEmail = conEmailTodos.filter((r) => dentroDelRango(fechaActividadEmail(r), cutoffISO));
+
   const total = conEmail.length;
-  const pendientes = conEmail.filter((r) => r.email_stage === 'PENDING').length;
   const enviados = conEmail.filter((r) => r.email_stage !== 'PENDING').length;
   const toque1 = conEmail.filter((r) => r.email_stage === 'TOQUE_1_SENT').length;
   const toque2 = conEmail.filter((r) => r.email_stage === 'TOQUE_2_SENT').length;
@@ -116,7 +146,9 @@ function calcularMetricasEmail(rows) {
   };
 }
 
-export function getStats() {
+// range: undefined/null = todo el historial, "7" o "30" = últimos N días.
+export function getStats(range) {
+  const cutoffISO = cutoffDesdeRango(range);
   const rows = getDb().prepare(`SELECT * FROM prospects`).all();
 
   const porPais = {};
@@ -128,18 +160,19 @@ export function getStats() {
 
   const paises = Object.keys(porPais)
     .sort((a, b) => porPais[b].length - porPais[a].length)
-    .map((pais) => ({ pais, ...calcularMetricas(porPais[pais]) }));
+    .map((pais) => ({ pais, ...calcularMetricas(porPais[pais], cutoffISO) }));
 
   const paisesEmail = Object.keys(porPais)
     .filter((pais) => porPais[pais].some((r) => r.gatekeeper_email && r.gatekeeper_email.trim()))
     .sort((a, b) => porPais[b].length - porPais[a].length)
-    .map((pais) => ({ pais, ...calcularMetricasEmail(porPais[pais]) }));
+    .map((pais) => ({ pais, ...calcularMetricasEmail(porPais[pais], cutoffISO) }));
 
   return {
-    total: calcularMetricas(rows),
+    range: RANGOS_VALIDOS.includes(String(range)) ? String(range) : null,
+    total: calcularMetricas(rows, cutoffISO),
     paises,
     email: {
-      total: calcularMetricasEmail(rows),
+      total: calcularMetricasEmail(rows, cutoffISO),
       paises: paisesEmail,
     },
   };
@@ -166,12 +199,19 @@ const FILTROS = {
   email_rebotados: (r) => r.email_stage === 'BOUNCED',
 };
 
-export function listarPorCategoria(categoria, pais) {
+export function listarPorCategoria(categoria, pais, range) {
   const filtro = FILTROS[categoria];
   if (!filtro) return [];
+  const cutoffISO = cutoffDesdeRango(range);
+  const esEmail = categoria.startsWith('email_');
+  const fechaActividad = esEmail ? fechaActividadEmail : fechaActividadWhatsapp;
+
   let rows = getDb().prepare(`SELECT * FROM prospects`).all();
   if (pais) rows = rows.filter((r) => normalizarPais(r.country) === pais);
-  return rows.filter(filtro).sort((a, b) => new Date(b.last_message_at || b.created_at) - new Date(a.last_message_at || a.created_at));
+  return rows
+    .filter(filtro)
+    .filter((r) => dentroDelRango(fechaActividad(r), cutoffISO))
+    .sort((a, b) => new Date(b.last_message_at || b.created_at) - new Date(a.last_message_at || a.created_at));
 }
 
 export { normalizarPais };

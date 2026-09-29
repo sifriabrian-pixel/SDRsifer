@@ -56,6 +56,9 @@ function layout(titulo, contenido) {
   .table-wrap { background: ${MARCA.card}; border: 1px solid ${MARCA.border}; border-radius: 10px; padding: 4px 16px; overflow-x: auto; }
   .back { display: inline-block; margin-bottom: 16px; font-size: 13px; text-decoration: none; }
   .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; background: ${MARCA.border}; }
+  .range-selector { display: flex; gap: 8px; margin-bottom: 20px; }
+  .range-pill { display: inline-block; padding: 6px 14px; border-radius: 999px; font-size: 13px; text-decoration: none; background: ${MARCA.card}; border: 1px solid ${MARCA.border}; color: ${MARCA.muted}; }
+  .range-pill.active { background: ${MARCA.accent}; border-color: ${MARCA.accent}; color: ${MARCA.bg}; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -68,28 +71,49 @@ function card(num, label, cls = '') {
   return `<div class="card"><div class="num ${cls}">${num ?? '—'}</div><div class="label">${label}</div></div>`;
 }
 
-function link(categoria, pais, texto) {
-  const qs = pais ? `?tipo=${categoria}&pais=${encodeURIComponent(pais)}` : `?tipo=${categoria}`;
-  return `<a href="/stats/detalle${qs}">${texto}</a>`;
+function link(categoria, pais, texto, range) {
+  const params = [`tipo=${categoria}`];
+  if (pais) params.push(`pais=${encodeURIComponent(pais)}`);
+  if (range) params.push(`range=${encodeURIComponent(range)}`);
+  return `<a href="/stats/detalle?${params.join('&')}">${texto}</a>`;
+}
+
+const RANGO_LABEL = { '7': 'Últimos 7 días', '30': 'Últimos 30 días' };
+
+function rangeSelector(range, basePath) {
+  const opciones = [
+    { valor: null, texto: 'Todo el historial' },
+    { valor: '7', texto: 'Últimos 7 días' },
+    { valor: '30', texto: 'Últimos 30 días' },
+  ];
+  const pills = opciones
+    .map((o) => {
+      const activo = (o.valor || null) === (range || null);
+      const href = o.valor ? `${basePath}?range=${o.valor}` : basePath;
+      return `<a href="${href}" class="range-pill${activo ? ' active' : ''}">${o.texto}</a>`;
+    })
+    .join('');
+  return `<div class="range-selector">${pills}</div>`;
 }
 
 export function renderStatsPage(stats) {
   const t = stats.total;
   const e = stats.email.total;
+  const range = stats.range;
 
   const filasEmail = stats.email.paises
     .map(
       (p) => `<tr>
         <td>${p.pais}</td>
-        <td>${link('email_enviados', p.pais, p.enviados)}</td>
+        <td>${link('email_enviados', p.pais, p.enviados, range)}</td>
         <td>${p.toque1}</td>
         <td>${p.toque2}</td>
         <td>${p.toque3}</td>
         <td>${p.toque4}</td>
-        <td>${link('email_contestaron', p.pais, p.contestaron)}</td>
-        <td>${link('email_handoff', p.pais, p.handoff)}</td>
-        <td>${link('email_sin_respuesta', p.pais, p.sinRespuesta)}</td>
-        <td class="red">${link('email_rebotados', p.pais, p.rebotados)}</td>
+        <td>${link('email_contestaron', p.pais, p.contestaron, range)}</td>
+        <td>${link('email_handoff', p.pais, p.handoff, range)}</td>
+        <td>${link('email_sin_respuesta', p.pais, p.sinRespuesta, range)}</td>
+        <td class="red">${link('email_rebotados', p.pais, p.rebotados, range)}</td>
         <td>${p.pendientes}</td>
       </tr>`
     )
@@ -99,15 +123,15 @@ export function renderStatsPage(stats) {
     .map(
       (p) => `<tr>
         <td>${p.pais}</td>
-        <td>${link('enviados', p.pais, p.enviados)}</td>
-        <td>${link('entregados', p.pais, p.entregados)}</td>
-        <td>${link('leidos', p.pais, p.leidos)}</td>
-        <td>${link('contestaron', p.pais, p.contestaron)}</td>
-        <td>${link('sin_respuesta', p.pais, p.sinRespuesta)}</td>
-        <td>${link('eran_dm', p.pais, p.eranDm)}</td>
-        <td>${link('derivaron_dm', p.pais, p.derivaronDm)}</td>
-        <td>${link('handoff', p.pais, p.handoff)}</td>
-        <td class="red">${link('sin_whatsapp', p.pais, p.sinWhatsapp)}</td>
+        <td>${link('enviados', p.pais, p.enviados, range)}</td>
+        <td>${link('entregados', p.pais, p.entregados, range)}</td>
+        <td>${link('leidos', p.pais, p.leidos, range)}</td>
+        <td>${link('contestaron', p.pais, p.contestaron, range)}</td>
+        <td>${link('sin_respuesta', p.pais, p.sinRespuesta, range)}</td>
+        <td>${link('eran_dm', p.pais, p.eranDm, range)}</td>
+        <td>${link('derivaron_dm', p.pais, p.derivaronDm, range)}</td>
+        <td>${link('handoff', p.pais, p.handoff, range)}</td>
+        <td class="red">${link('sin_whatsapp', p.pais, p.sinWhatsapp, range)}</td>
         <td>${p.pendientes}</td>
       </tr>`
     )
@@ -116,6 +140,7 @@ export function renderStatsPage(stats) {
   const contenido = `
     <h1>Sifer — Dashboard SDR</h1>
     <h2>Prospección outbound por WhatsApp · datos en vivo</h2>
+    ${rangeSelector(range, '/stats')}
 
     <div class="cards">
       ${card(t.enviados, 'Enviados (total)')}
@@ -175,7 +200,7 @@ export function renderStatsPage(stats) {
   return layout('Dashboard', contenido);
 }
 
-export function renderDetallePage(categoria, pais, rows) {
+export function renderDetallePage(categoria, pais, rows, range) {
   const titulo = CATEGORIA_LABEL[categoria] || categoria;
   const esEmail = categoria.startsWith('email_');
   const filas = rows
@@ -190,10 +215,11 @@ export function renderDetallePage(categoria, pais, rows) {
     )
     .join('');
 
+  const volverQs = range ? `?range=${encodeURIComponent(range)}` : '';
   const contenido = `
-    <a class="back" href="/stats">← Volver al dashboard</a>
+    <a class="back" href="/stats${volverQs}">← Volver al dashboard</a>
     <h1>${titulo}${pais ? ' — ' + pais : ''}</h1>
-    <h2>${rows.length} prospectos</h2>
+    <h2>${rows.length} prospectos ${range ? `(${RANGO_LABEL[range] || range})` : '(todo el historial)'}</h2>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Agencia</th><th>País</th><th>${esEmail ? 'Email' : 'Teléfono'}</th><th>Etapa</th><th>Último mensaje</th></tr></thead>

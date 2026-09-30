@@ -194,21 +194,23 @@ export function getPendingProspects(limit = 50, offset = 0, country = null, fran
   ).all(...params, limit, offset);
 }
 
-// Prospectos con email conocido y pipeline de email aún no iniciado.
-// Para la mayoría de los países el email es SOLO respaldo de WhatsApp: espera
-// a que falle (NO_WHATSAPP) o a que no haya teléfono. Miami es la excepción —
-// ahí van los dos canales en paralelo, sin esperar a que falle el WhatsApp.
+// Países donde el email va en paralelo al WhatsApp, sin esperar a que falle
+// (por pedido de Brian, país por país). El resto usa el criterio de respaldo:
+// solo entra al pipeline de email si el WhatsApp ya falló o no hay teléfono.
+const EMAIL_EN_PARALELO = ['Estados Unidos', 'Colombia'];
+
 export function getPendingEmailProspects(limit = 50) {
+  const paralelo = EMAIL_EN_PARALELO.map(() => 'country = ?').join(' OR ');
   return getDb().prepare(`
     SELECT * FROM prospects
     WHERE email_stage = 'PENDING' AND gatekeeper_email IS NOT NULL AND gatekeeper_email != ''
       AND stage != 'DISCARDED'
       AND (
         stage = 'NO_WHATSAPP' OR gatekeeper_phone IS NULL OR gatekeeper_phone = '' OR gatekeeper_phone = 'sin-telefono'
-        OR country = 'Estados Unidos'
+        OR ${paralelo}
       )
     LIMIT ?
-  `).all(limit);
+  `).all(...EMAIL_EN_PARALELO, limit);
 }
 
 export function getAllProspects() {

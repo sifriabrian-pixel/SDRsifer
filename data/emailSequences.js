@@ -3,22 +3,11 @@
 // Franquicias: días 1, 3, 8, 15 · Independientes y Miami: días 1, 3, 10, 17.
 // Cualquier respuesta detiene la secuencia (handoff).
 
-function saludo(dmName, email, agencyName) {
-  // Si hay nombre explícito del DM, usarlo
+function saludo(dmName) {
+  // Si hay nombre explícito del DM, usarlo. Si no, saludo genérico — nada de
+  // adivinar un nombre a partir del email (ej: "arriendos@..." → "Hola Arriendos,").
   if (dmName && dmName.trim()) return `Hola ${dmName.trim()},`;
-  // Si el email tiene un nombre personal (alex@remax.com → "Alex")
-  if (email) {
-    const local = email.split('@')[0].toLowerCase();
-    const genericos = ['info', 'contacto', 'contact', 'ventas', 'admin', 'oficina', 'hello', 'hola', 'hello', 'soporte'];
-    if (!genericos.some(g => local.startsWith(g))) {
-      // Es un nombre personal — capitalizar primera letra
-      const nombre = local.charAt(0).toUpperCase() + local.slice(1).split('.')[0];
-      return `Hola ${nombre},`;
-    }
-  }
-  // Email genérico — usar nombre de la agencia si está disponible
-  if (agencyName && agencyName.trim()) return `Hola, equipo de ${agencyName.trim()},`;
-  return 'Hola,';
+  return 'Hola, un placer saludarlos,';
 }
 
 const FIRMA = () => {
@@ -75,7 +64,7 @@ ${FIRMA()}`,
 export const EMAIL_FRANQUICIA_TOQUE_2 = (franquicia, country, dmName, email, agencyName) => {
   return {
     subjectPrefix: 'Re: ',
-    text: `${saludo(dmName, email, agencyName)}, sumo algo a mi correo anterior.
+    text: `${saludo(dmName)} sumo algo a mi correo anterior.
 
 Los asesores buenos no se van a la oficina que paga mejor comisión: se van a la que tiene mejor sistema. Leads que llegan calificados, respuesta inmediata y un proceso claro para no perder a nadie.
 

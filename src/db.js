@@ -197,7 +197,7 @@ export function getPendingProspects(limit = 50, offset = 0, country = null, fran
 // Países donde el email va en paralelo al WhatsApp, sin esperar a que falle
 // (por pedido de Brian, país por país). El resto usa el criterio de respaldo:
 // solo entra al pipeline de email si el WhatsApp ya falló o no hay teléfono.
-const EMAIL_EN_PARALELO = ['Estados Unidos', 'Colombia'];
+const EMAIL_EN_PARALELO = ['Estados Unidos', 'Colombia', 'Argentina', 'Paraguay'];
 
 export function getPendingEmailProspects(limit = 50) {
   const paralelo = EMAIL_EN_PARALELO.map(() => 'country = ?').join(' OR ');

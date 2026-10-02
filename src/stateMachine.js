@@ -256,6 +256,29 @@ export async function handleMessage(prospect, incomingText, fromJid) {
 
   // ─── FASE 2 CALIFICANDO: portero dijo "yo ayudo", preguntamos si es decisor ─
   if (stage === 'FASE2_CALIFICANDO') {
+    // Si el portero comparte una tarjeta de contacto (justo después de "claro que sí",
+    // cuando ya habíamos preguntado si es decisor), es el contacto del director — no
+    // hay nada que calificar: se le escribe directo al director.
+    const tarjeta = incomingText.match(/\[Compartió el contacto\][^\n]*Teléfono:\s*([+\d][\d\s+()-]{6,})/);
+    if (tarjeta) {
+      const dmPhone = tarjeta[1].trim();
+      const dmJid = `${dmPhone.replace(/\D/g, '')}@s.whatsapp.net`;
+      await updateProspect(prospect.id, {
+        stage: 'FASE3_APERTURA',
+        dm_phone: dmPhone,
+        dm_jid: dmJid,
+        last_reply_at: new Date().toISOString(),
+        notes: appendNote(notes, `Portero compartió tarjeta de contacto del director: ${dmPhone}`),
+      });
+      await sendMessage(fromJid, FASE2_CIERRE_PORTERO);
+      await sendFase3Apertura(dmJid, null, pais);
+      await updateProspect(prospect.id, {
+        stage: 'FASE3_BIFURCACION',
+        last_message_at: new Date().toISOString(),
+      });
+      return;
+    }
+
     const { is_dm } = await classifyPorteroEsDM(incomingText);
 
     if (is_dm) {

@@ -56,7 +56,11 @@ function layout(titulo, contenido) {
   .table-wrap { background: ${MARCA.card}; border: 1px solid ${MARCA.border}; border-radius: 10px; padding: 4px 16px; overflow-x: auto; }
   .back { display: inline-block; margin-bottom: 16px; font-size: 13px; text-decoration: none; }
   .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; background: ${MARCA.border}; }
-  .range-selector { display: flex; gap: 8px; margin-bottom: 20px; }
+  .range-selector { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 20px; }
+  .range-custom { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: 8px; padding: 4px 10px; border-radius: 999px; border: 1px solid ${MARCA.border}; background: ${MARCA.card}; font-size: 13px; color: ${MARCA.muted}; }
+  .range-custom.active { border-color: ${MARCA.accent}; }
+  .range-custom input { background: ${MARCA.bg}; color: ${MARCA.text}; border: 1px solid ${MARCA.border}; border-radius: 6px; padding: 4px 6px; color-scheme: dark; }
+  .range-custom button { background: ${MARCA.accent}; color: ${MARCA.bg}; border: 0; border-radius: 999px; padding: 5px 14px; font-weight: 600; cursor: pointer; }
   .range-pill { display: inline-block; padding: 6px 14px; border-radius: 999px; font-size: 13px; text-decoration: none; background: ${MARCA.card}; border: 1px solid ${MARCA.border}; color: ${MARCA.muted}; }
   .range-pill.active { background: ${MARCA.accent}; border-color: ${MARCA.accent}; color: ${MARCA.bg}; font-weight: 600; }
 </style>
@@ -71,16 +75,38 @@ function card(num, label, cls = '') {
   return `<div class="card"><div class="num ${cls}">${num ?? '—'}</div><div class="label">${label}</div></div>`;
 }
 
-function link(categoria, pais, texto, range) {
+// filtro = { range, desde, hasta } — "range" es el atajo (7/30), desde/hasta el
+// rango personalizado (YYYY-MM-DD). Se pasa tal cual a todos los links.
+function filtroQs(filtro) {
+  const params = [];
+  if (filtro?.desde) params.push(`desde=${encodeURIComponent(filtro.desde)}`);
+  if (filtro?.hasta) params.push(`hasta=${encodeURIComponent(filtro.hasta)}`);
+  if (!filtro?.desde && !filtro?.hasta && filtro?.range) params.push(`range=${encodeURIComponent(filtro.range)}`);
+  return params;
+}
+
+function link(categoria, pais, texto, filtro) {
   const params = [`tipo=${categoria}`];
   if (pais) params.push(`pais=${encodeURIComponent(pais)}`);
-  if (range) params.push(`range=${encodeURIComponent(range)}`);
+  params.push(...filtroQs(filtro));
   return `<a href="/stats/detalle?${params.join('&')}">${texto}</a>`;
 }
 
 const RANGO_LABEL = { '7': 'Últimos 7 días', '30': 'Últimos 30 días' };
 
-function rangeSelector(range, basePath) {
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function etiquetaFiltro(filtro) {
+  if (filtro?.desde || filtro?.hasta) {
+    return `${esc(filtro.desde || 'inicio')} → ${esc(filtro.hasta || 'hoy')}`;
+  }
+  return filtro?.range ? RANGO_LABEL[filtro.range] || esc(filtro.range) : 'todo el historial';
+}
+
+function rangeSelector(filtro, basePath) {
+  const personalizado = !!(filtro?.desde || filtro?.hasta);
   const opciones = [
     { valor: null, texto: 'Todo el historial' },
     { valor: '7', texto: 'Últimos 7 días' },
@@ -88,18 +114,23 @@ function rangeSelector(range, basePath) {
   ];
   const pills = opciones
     .map((o) => {
-      const activo = (o.valor || null) === (range || null);
+      const activo = !personalizado && (o.valor || null) === (filtro?.range || null);
       const href = o.valor ? `${basePath}?range=${o.valor}` : basePath;
       return `<a href="${href}" class="range-pill${activo ? ' active' : ''}">${o.texto}</a>`;
     })
     .join('');
-  return `<div class="range-selector">${pills}</div>`;
+  const form = `<form class="range-custom${personalizado ? ' active' : ''}" method="get" action="${basePath}">
+      <label>Desde <input type="date" name="desde" value="${filtro?.desde || ''}"></label>
+      <label>Hasta <input type="date" name="hasta" value="${filtro?.hasta || ''}"></label>
+      <button type="submit">Aplicar</button>
+    </form>`;
+  return `<div class="range-selector">${pills}${form}</div>`;
 }
 
 export function renderStatsPage(stats) {
   const t = stats.total;
   const e = stats.email.total;
-  const range = stats.range;
+  const range = { range: stats.range, desde: stats.desde, hasta: stats.hasta };
 
   const filasEmail = stats.email.paises
     .map(
@@ -200,7 +231,7 @@ export function renderStatsPage(stats) {
   return layout('Dashboard', contenido);
 }
 
-export function renderDetallePage(categoria, pais, rows, range) {
+export function renderDetallePage(categoria, pais, rows, filtro) {
   const titulo = CATEGORIA_LABEL[categoria] || categoria;
   const esEmail = categoria.startsWith('email_');
   const filas = rows
@@ -215,11 +246,12 @@ export function renderDetallePage(categoria, pais, rows, range) {
     )
     .join('');
 
-  const volverQs = range ? `?range=${encodeURIComponent(range)}` : '';
+  const qs = filtroQs(filtro);
+  const volverQs = qs.length ? `?${qs.join('&')}` : '';
   const contenido = `
     <a class="back" href="/stats${volverQs}">← Volver al dashboard</a>
     <h1>${titulo}${pais ? ' — ' + pais : ''}</h1>
-    <h2>${rows.length} prospectos ${range ? `(${RANGO_LABEL[range] || range})` : '(todo el historial)'}</h2>
+    <h2>${rows.length} prospectos (${etiquetaFiltro(filtro)})</h2>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Agencia</th><th>País</th><th>${esEmail ? 'Email' : 'Teléfono'}</th><th>Etapa</th><th>Último mensaje</th></tr></thead>

@@ -37,10 +37,18 @@ const CONTESTARON = [
 // Rangos de fecha admitidos por el dashboard — null/undefined = todo el historial.
 const RANGOS_VALIDOS = ['7', '30'];
 
-function cutoffDesdeRango(range) {
+const FECHA_YMD = /^\d{4}-\d{2}-\d{2}$/;
+
+// Devuelve { desde, hasta } (ISO, cualquiera puede ser null) o null si no hay filtro.
+// Un rango personalizado (desde/hasta en YYYY-MM-DD, días UTC inclusivos) tiene
+// prioridad sobre los atajos de 7/30 días.
+function rangoDesdeFiltro(range, desde, hasta) {
+  const desdeOk = FECHA_YMD.test(desde || '') ? `${desde}T00:00:00.000Z` : null;
+  const hastaOk = FECHA_YMD.test(hasta || '') ? `${hasta}T23:59:59.999Z` : null;
+  if (desdeOk || hastaOk) return { desde: desdeOk, hasta: hastaOk };
   if (!RANGOS_VALIDOS.includes(String(range))) return null;
   const dias = parseInt(range, 10);
-  return new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toISOString();
+  return { desde: new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toISOString(), hasta: null };
 }
 
 function fechaActividadWhatsapp(r) {
@@ -51,18 +59,20 @@ function fechaActividadEmail(r) {
   return r.email_last_message_at || r.email_first_sent_at || null;
 }
 
-function dentroDelRango(fecha, cutoffISO) {
-  if (!cutoffISO) return true;
+function dentroDelRango(fecha, rango) {
+  if (!rango) return true;
   if (!fecha) return false;
-  return fecha >= cutoffISO;
+  if (rango.desde && fecha < rango.desde) return false;
+  if (rango.hasta && fecha > rango.hasta) return false;
+  return true;
 }
 
 // Métricas base de un conjunto de filas ya filtradas por país (o todas).
 // "pendientes" siempre refleja la cola actual completa, sin filtrar por fecha
 // (es "cuánto falta mandar hoy"); el resto se recorta al rango pedido.
-function calcularMetricas(rowsPais, cutoffISO) {
+function calcularMetricas(rowsPais, rango) {
   const pendientes = rowsPais.filter((r) => r.stage === 'PENDING').length;
-  const rows = rowsPais.filter((r) => dentroDelRango(fechaActividadWhatsapp(r), cutoffISO));
+  const rows = rowsPais.filter((r) => dentroDelRango(fechaActividadWhatsapp(r), rango));
 
   const total = rows.length;
   const emailOnly = rows.filter((r) => r.stage === 'EMAIL_ONLY').length;
@@ -110,10 +120,10 @@ const EMAIL_CONTESTARON = ['AGUARDANDO_REDIRECT', 'HANDED_OFF'];
 
 // Métricas del pipeline de email de un conjunto de filas ya filtradas por país
 // (mismo criterio: pendientes es la cola actual sin filtrar; el resto se recorta al rango).
-function calcularMetricasEmail(rowsPais, cutoffISO) {
+function calcularMetricasEmail(rowsPais, rango) {
   const conEmailTodos = rowsPais.filter((r) => r.gatekeeper_email && r.gatekeeper_email.trim());
   const pendientes = conEmailTodos.filter((r) => r.email_stage === 'PENDING').length;
-  const conEmail = conEmailTodos.filter((r) => dentroDelRango(fechaActividadEmail(r), cutoffISO));
+  const conEmail = conEmailTodos.filter((r) => dentroDelRango(fechaActividadEmail(r), rango));
 
   const total = conEmail.length;
   const enviados = conEmail.filter((r) => r.email_stage !== 'PENDING').length;
@@ -147,8 +157,10 @@ function calcularMetricasEmail(rowsPais, cutoffISO) {
 }
 
 // range: undefined/null = todo el historial, "7" o "30" = últimos N días.
-export function getStats(range) {
-  const cutoffISO = cutoffDesdeRango(range);
+// desde/hasta (YYYY-MM-DD): rango personalizado, tiene prioridad sobre range.
+export function getStats(range, desde, hasta) {
+  const rango = rangoDesdeFiltro(range, desde, hasta);
+  const personalizado = rango && (FECHA_YMD.test(desde || '') || FECHA_YMD.test(hasta || ''));
   const rows = getDb().prepare(`SELECT * FROM prospects`).all();
 
   const porPais = {};
@@ -160,19 +172,21 @@ export function getStats(range) {
 
   const paises = Object.keys(porPais)
     .sort((a, b) => porPais[b].length - porPais[a].length)
-    .map((pais) => ({ pais, ...calcularMetricas(porPais[pais], cutoffISO) }));
+    .map((pais) => ({ pais, ...calcularMetricas(porPais[pais], rango) }));
 
   const paisesEmail = Object.keys(porPais)
     .filter((pais) => porPais[pais].some((r) => r.gatekeeper_email && r.gatekeeper_email.trim()))
     .sort((a, b) => porPais[b].length - porPais[a].length)
-    .map((pais) => ({ pais, ...calcularMetricasEmail(porPais[pais], cutoffISO) }));
+    .map((pais) => ({ pais, ...calcularMetricasEmail(porPais[pais], rango) }));
 
   return {
-    range: RANGOS_VALIDOS.includes(String(range)) ? String(range) : null,
-    total: calcularMetricas(rows, cutoffISO),
+    range: personalizado ? null : RANGOS_VALIDOS.includes(String(range)) ? String(range) : null,
+    desde: FECHA_YMD.test(desde || '') ? desde : null,
+    hasta: FECHA_YMD.test(hasta || '') ? hasta : null,
+    total: calcularMetricas(rows, rango),
     paises,
     email: {
-      total: calcularMetricasEmail(rows, cutoffISO),
+      total: calcularMetricasEmail(rows, rango),
       paises: paisesEmail,
     },
   };
@@ -199,10 +213,10 @@ const FILTROS = {
   email_rebotados: (r) => r.email_stage === 'BOUNCED',
 };
 
-export function listarPorCategoria(categoria, pais, range) {
+export function listarPorCategoria(categoria, pais, range, desde, hasta) {
   const filtro = FILTROS[categoria];
   if (!filtro) return [];
-  const cutoffISO = cutoffDesdeRango(range);
+  const rango = rangoDesdeFiltro(range, desde, hasta);
   const esEmail = categoria.startsWith('email_');
   const fechaActividad = esEmail ? fechaActividadEmail : fechaActividadWhatsapp;
 
@@ -210,7 +224,7 @@ export function listarPorCategoria(categoria, pais, range) {
   if (pais) rows = rows.filter((r) => normalizarPais(r.country) === pais);
   return rows
     .filter(filtro)
-    .filter((r) => dentroDelRango(fechaActividad(r), cutoffISO))
+    .filter((r) => dentroDelRango(fechaActividad(r), rango))
     .sort((a, b) => new Date(b.last_message_at || b.created_at) - new Date(a.last_message_at || a.created_at));
 }
 

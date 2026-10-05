@@ -120,15 +120,15 @@ export function startKapsoServer() {
   app.get('/stats', (req, res) => {
     if (!checkAuth(req, res)) return;
     res.set('Content-Type', 'text/html; charset=utf-8');
-    res.send(renderStatsPage(getStats(req.query.range)));
+    res.send(renderStatsPage(getStats(req.query.range, req.query.desde, req.query.hasta)));
   });
 
   app.get('/stats/detalle', (req, res) => {
     if (!checkAuth(req, res)) return;
-    const { tipo, pais, range } = req.query;
-    const rows = listarPorCategoria(tipo, pais || null, range);
+    const { tipo, pais, range, desde, hasta } = req.query;
+    const rows = listarPorCategoria(tipo, pais || null, range, desde, hasta);
     res.set('Content-Type', 'text/html; charset=utf-8');
-    res.send(renderDetallePage(tipo, pais || null, rows, range));
+    res.send(renderDetallePage(tipo, pais || null, rows, { range, desde, hasta }));
   });
 
   // Handshake de verificación (solo aplica si se suscribe directo a Meta)

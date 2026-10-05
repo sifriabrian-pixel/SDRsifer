@@ -37,7 +37,7 @@ function layout(titulo, contenido) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${titulo} — Sifer CRM</title>
+<title>${titulo} — SDR Sifer</title>
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; background: ${MARCA.bg}; color: ${MARCA.text}; font-family: -apple-system, Segoe UI, sans-serif; padding: 24px; }
@@ -138,7 +138,7 @@ export function renderStatsPage(stats) {
     .join('');
 
   const contenido = `
-    <h1>Sifer — Dashboard SDR</h1>
+    <h1>SDR Sifer</h1>
     <h2>Prospección outbound por WhatsApp · datos en vivo</h2>
     ${rangeSelector(range, '/stats')}
 

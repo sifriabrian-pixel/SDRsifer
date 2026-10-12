@@ -1,6 +1,10 @@
 import { getPendingProspects, updateProspect } from './db.js';
 import { resolveJid, chatExists, sendFase1 } from './transport.js';
 
+// Errores seguidos (rate limit de Kapso, saldo agotado, caída de la API) tras los
+// cuales se corta el lote en vez de recorrer toda la cola golpeando la API.
+const MAX_ERRORES_SEGUIDOS = 5;
+
 export async function runLaunchBatch(limit, country = null, franquicia = null) {
   const etiqueta = [country, franquicia].filter(Boolean).join(' — ');
   console.log(`\n🚀 Enviando mensajes a ${limit} prospectos nuevos${etiqueta ? ` (${etiqueta})` : ''}...\n`);
@@ -8,8 +12,10 @@ export async function runLaunchBatch(limit, country = null, franquicia = null) {
   let enviados = 0;
   let saltados = 0;
   let noWhatsapp = 0;
+  let erroresSeguidos = 0;
+  let abortado = false;
 
-  while (enviados < limit) {
+  while (enviados < limit && !abortado) {
     const batch = getPendingProspects(20, 0, country, franquicia);
     if (batch.length === 0) {
       console.log(`No hay más prospectos en estado PENDING${etiqueta ? ` para ${etiqueta}` : ''}.`);
@@ -17,7 +23,7 @@ export async function runLaunchBatch(limit, country = null, franquicia = null) {
     }
 
     for (const prospect of batch) {
-      if (enviados >= limit) break;
+      if (enviados >= limit || abortado) break;
 
       try {
         const resolved = await resolveJid(prospect.gatekeeper_phone);
@@ -26,6 +32,7 @@ export async function runLaunchBatch(limit, country = null, franquicia = null) {
           await updateProspect(prospect.id, { stage: 'NO_WHATSAPP' });
           console.log(`[NO WA] ${prospect.agency_name} — número no está en WhatsApp`);
           noWhatsapp++;
+          erroresSeguidos = 0;
           continue;
         }
 
@@ -35,6 +42,7 @@ export async function runLaunchBatch(limit, country = null, franquicia = null) {
           await updateProspect(prospect.id, { stage: 'SKIPPED', gatekeeper_jid: jid, gatekeeper_lid: lid });
           console.log(`[SKIP]  ${prospect.agency_name} — ya tiene conversación activa`);
           saltados++;
+          erroresSeguidos = 0;
           continue;
         }
 
@@ -48,10 +56,16 @@ export async function runLaunchBatch(limit, country = null, franquicia = null) {
         });
         console.log(`[SENT]  ${prospect.agency_name} → ${jid}`);
         enviados++;
+        erroresSeguidos = 0;
       } catch (err) {
         // Un error puntual (ej: caída momentánea de la API) no debe tirar abajo todo el lote.
         // El prospecto queda en PENDING y se reintenta en el próximo lanzamiento.
         console.error(`[ERROR] ${prospect.agency_name} — ${(err.message || '').slice(0, 200)} — sigo con el próximo`);
+        erroresSeguidos++;
+        if (erroresSeguidos >= MAX_ERRORES_SEGUIDOS) {
+          console.error(`⛔ ${erroresSeguidos} errores seguidos — corto el lote para no golpear la API (rate limit o saldo). Los pendientes quedan en cola.`);
+          abortado = true;
+        }
       }
     }
   }

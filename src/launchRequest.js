@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import path from 'path';
 import { runLaunchBatch } from './launch.js';
+import { startWhatsappDrip } from './whatsappDrip.js';
 
 const REQUEST_PATH = process.env.LAUNCH_REQUEST_PATH
   || path.join(path.dirname(process.env.DB_PATH || './sifer.db'), 'launch_request.json');
@@ -23,6 +24,9 @@ async function checkRequest() {
 }
 
 export function startLaunchRequestWatcher() {
+  // El drip de WhatsApp vive solo en el servidor principal: las sesiones manuales
+  // (`node index.js launch ...`) no deben arrancar un segundo drip duplicado.
+  if (process.argv[2] !== 'launch') startWhatsappDrip();
   setInterval(checkRequest, CHECK_INTERVAL_MS);
   console.log(`📨 Launch-request watcher activo — revisa ${REQUEST_PATH} cada 30s`);
 }

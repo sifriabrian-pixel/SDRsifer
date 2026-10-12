@@ -206,7 +206,7 @@ export function getPendingEmailProspects(limit = 50) {
     WHERE email_stage = 'PENDING' AND gatekeeper_email IS NOT NULL AND gatekeeper_email != ''
       AND stage != 'DISCARDED'
       AND (
-        stage = 'NO_WHATSAPP' OR gatekeeper_phone IS NULL OR gatekeeper_phone = '' OR gatekeeper_phone = 'sin-telefono'
+        stage = 'NO_WHATSAPP' OR stage = 'EMAIL_ONLY' OR gatekeeper_phone IS NULL OR gatekeeper_phone = '' OR gatekeeper_phone = 'sin-telefono'
         OR ${paralelo}
       )
     LIMIT ?
